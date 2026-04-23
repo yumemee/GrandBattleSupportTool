@@ -94,7 +94,7 @@
     border-spacing: 0;
     font-family: var(--mono); 
     font-size: 12px; 
-    min-width: 850px; /* スマホで表が潰れないよう最小幅を確保 */
+    min-width: 920px; /* 名前追加に伴い最小幅を少し増加 */
   }
 
   thead th { 
@@ -121,7 +121,9 @@
   }
   td:last-child { border-right: none; }
 
-  .cid { color: var(--accent); font-weight: bold; text-align: center; }
+  .cid-cell { display: flex; align-items: center; gap: 8px; }
+  .cid { color: var(--accent); font-weight: bold; min-width: 20px; text-align: center; }
+  .cname { color: var(--text); font-family: var(--sans); font-size: 11px; }
   .guild { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
   .atk-g { color: var(--attack); }
   .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
@@ -206,6 +208,12 @@
 const API = 'https://api.mentemori.icu';
 const WS_URL = 'wss://api.mentemori.icu/gvg';
 const SL = {0:'−',1:'宣戦中',2:'陥落',3:'反撃',4:'反撃成功'};
+const CNAMES = {
+  1:'アイン', 2:'テファレト', 3:'イエソド', 4:'マルクト', 5:'ケテル',
+  6:'ガネット', 7:'ルラ', 8:'クシェル', 9:'ファリア', 10:'シトリ',
+  11:'トパズ', 12:'メラル', 13:'ペリド', 14:'ラピス', 15:'ラリマル',
+  16:'マリン', 17:'アメト', 18:'ラベン', 19:'ジルコン', 20:'オニキス', 21:'フロライト'
+};
 
 let ws=null, wsConnected=false;
 let guilds={}, castles={}, attackStart={}, defenseStart={};
@@ -379,8 +387,14 @@ function render(){
   </tr></thead><tbody>`;
   for(const cid of cids){
     const c=castles[cid];
+    const cname = CNAMES[cid] || '???';
     h+=`<tr>
-      <td class="cid">${cid}</td>
+      <td>
+        <div class="cid-cell">
+          <span class="cid">${cid}</span>
+          <span class="cname">${cname}</span>
+        </div>
+      </td>
       <td class="guild">${gName(c.ownerGuildId)}</td>
       <td class="guild atk-g">${c.attackerGuildId?gName(c.attackerGuildId):'<span class="tn">−</span>'}</td>
       <td><span class="badge s${c.state}">${SL[c.state]||c.state}</span></td>
