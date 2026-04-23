@@ -43,7 +43,6 @@
     .status-bar { top: 138px; }
   }
 
-  /* 曜日セレクターの追加スタイル (トナマナ準拠) */
   .day-tabs { display: flex; gap: 4px; margin-left: 15px; }
   .day-tab { 
     background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
@@ -208,7 +207,7 @@
     <div id="groupList"></div>
   </div>
   <div class="info-note">
-    ℹ️ 曜日を選択すると過去の保存ログを閲覧できます。AM4:00に自動で「今日の曜日」に切り替わります。
+    ℹ️ 曜日を選択すると過去の保存ログを閲覧できます。過去曜日ではログ時刻のみを表示します。
   </div>
   <div class="legend">
     <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
@@ -233,30 +232,26 @@ const GROUP_WORLDS = { 140: "W149, W150, W151, W152", 141: "W1, W7, W12, W19", 1
 let ws=null, wsConnected=false;
 let guilds={}, castles={};
 
-// --- GVG曜日取得 (AM4:00基準) ---
 function getGvgDaySuffix() {
   const now = new Date();
   if (now.getHours() < 4) now.setDate(now.getDate() - 1);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   let d = days[now.getDay()];
-  return (d === "Mon") ? "Sun" : d; // 月曜は日曜の残り
+  return (d === "Mon") ? "Sun" : d;
 }
 
-// --- 永続化ストレージと表示用変数 ---
-let currentDay = getGvgDaySuffix(); // 実際に記録する「今日」の曜日
-let viewDay = getGvgDaySuffix();    // 現在テーブルに表示している曜日
+let currentDay = getGvgDaySuffix();
+let viewDay = getGvgDaySuffix();
 let attackStart = {};
 let defenseStart = {};
 let fallenStart = {};
 
-// データのロード関数
 function loadDayData(day) {
   attackStart = JSON.parse(localStorage.getItem(`gw_atk_${day}`) || '{}');
   defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
   fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
 }
 
-// データの保存関数 (常に「今日」の曜日に保存)
 function saveLog() {
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
@@ -264,7 +259,6 @@ function saveLog() {
   localStorage.setItem('gw_lastUpdate_v2', Date.now().toString());
 }
 
-// 曜日切替UIの更新
 function updateDayTabs() {
   document.querySelectorAll('.day-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.day === viewDay);
@@ -296,7 +290,6 @@ const getUniqueKey = (cid) => {
   return `${gr}_${cl}_${bl}_${cid}`;
 };
 
-// 初期ロード
 loadDayData(viewDay);
 updateDayTabs();
 
@@ -376,7 +369,6 @@ async function fetchInitial(gr,cl,bl){
         attackCount:c.AttackPartyCount||0,
         state:c.GvgCastleState||0, koCount:0
       };
-      // 接続した瞬間が「今日」ならログを更新
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
@@ -399,7 +391,6 @@ function connect(){
   document.getElementById('matchInfo').textContent='';
   setStat('connecting','接続中...');
   
-  // 接続時は自動的に「今日」の表示に切り替える
   viewDay = currentDay;
   loadDayData(currentDay);
   updateDayTabs();
@@ -431,7 +422,6 @@ document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(!confirm(`${viewDay}のログをリセットしますか？`)) return;
   attackStart = {}; defenseStart = {}; fallenStart = {};
-  // 接続中かつ「今日」をリセットした場合は現在の盤面から「接続前」として再セット
   if(wsConnected && viewDay === currentDay) {
     for(let i in castles) {
       const key = getUniqueKey(i);
@@ -470,8 +460,7 @@ function parseMsg(dv,buf){
       
       const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0};
       
-      // ログ記録は表示日に関係なく常に「現在の曜日」に対して行う
-      if(viewDay === currentDay) {
+      if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
         if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
           if(!attackStart[key] || attackStart[key] === 'before') {
@@ -498,15 +487,17 @@ function parseMsg(dv,buf){
       changed=true;
     }
   }
-  if(changed) render();
+  if(changed && viewDay === currentDay) render();
 }
 
 function render(){
   const ct=document.getElementById('tableContainer');
   const st = document.getElementById('summaryContainer');
-  const cids=Object.keys(castles).length > 0 ? Object.keys(castles).map(Number).sort((a,b)=>a-b) : Array.from({length:21},(_,i)=>i+1);
+  const isToday = (viewDay === currentDay);
   
+  const cids = Array.from({length:21},(_,i)=>i+1);
   const summary = {};
+  
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
     <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
@@ -514,42 +505,47 @@ function render(){
   </tr></thead><tbody>`;
 
   for(const cid of cids){
-    const c=castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0};
+    const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0}) : {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0};
     const cname = CNAMES[cid] || '???';
     const key = getUniqueKey(cid);
-    if(c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
-    if(c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
+    
+    if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
+    if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    const displayFallen = fallenStart[key] ? fallenStart[key] / 1000 : c.fallenTs;
+    const displayFallen = fallenStart[key] ? fallenStart[key] / 1000 : (isToday ? c.fallenTs : 0);
 
     h+=`<tr>
       <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
-      <td class="guild">${gName(c.ownerGuildId)}</td>
-      <td class="guild atk-g">${c.attackerGuildId?gName(c.attackerGuildId):'<span class="tn">−</span>'}</td>
-      <td><span class="badge s${c.state}">${SL[c.state]||c.state}</span></td>
-      <td class="cnt ${c.attackCount>0?'ca':'cz'}">${c.attackCount}</td>
-      <td class="cnt ${c.defenseCount>0?'cd':'cz'}">${c.defenseCount}</td>
+      <td class="guild">${isToday ? gName(c.ownerGuildId) : '<span class="tn">−</span>'}</td>
+      <td class="guild atk-g">${isToday && c.attackerGuildId ? gName(c.attackerGuildId) : '<span class="tn">−</span>'}</td>
+      <td>${isToday ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td>
+      <td class="cnt ${isToday && c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td>
+      <td class="cnt ${isToday && c.defenseCount>0?'cd':'cz'}">${isToday ? c.defenseCount : '−'}</td>
       <td>${fmtStart(attackStart[key])}</td>
       <td>${fmtStart(defenseStart[key])}</td>
       <td class="${displayFallen?'tf':'tn'}">${fmtSec(displayFallen)}</td>
-      <td class="cnt cz">${c.koCount||0}</td>
+      <td class="cnt cz">${isToday ? (c.koCount||0) : '−'}</td>
     </tr>`;
   }
   
-  let sh = `<div class="summary-section">
-    <div class="summary-title">▶ TOTAL ACTIVE PARTIES (配置済みパーティ数)</div>
-    <div class="summary-grid">`;
-  const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
-  for(const gid of sortedGuilds) {
-    if(summary[gid] === 0) continue; 
-    sh += `<div class="summary-card">
-      <div class="summary-gname">${gName(gid)}</div>
-      <div class="summary-count">${summary[gid]}<span>P</span></div>
-    </div>`;
+  if (isToday) {
+    let sh = `<div class="summary-section">
+      <div class="summary-title">▶ TOTAL ACTIVE PARTIES (配置済みパーティ数)</div>
+      <div class="summary-grid">`;
+    const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
+    for(const gid of sortedGuilds) {
+      if(summary[gid] === 0) continue; 
+      sh += `<div class="summary-card">
+        <div class="summary-gname">${gName(gid)}</div>
+        <div class="summary-count">${summary[gid]}<span>P</span></div>
+      </div>`;
+    }
+    sh += `</div></div>`;
+    st.innerHTML = sh;
+  } else {
+    st.innerHTML = '';
   }
-  sh += `</div></div>`;
 
-  st.innerHTML = sh;
   ct.innerHTML = h + '</tbody></table>';
 }
 
