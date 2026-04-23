@@ -4,8 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>▶ GRAND WAR MONITOR !!!</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // --- Firebase設定をここに貼り付け ---
+  const firebaseConfig = {
+  apiKey: "AIzaSyCBuEBsIBE8hhU50epc8CtyeJn_gQLM2rc",
+  authDomain: "grand-war-monitor.firebaseapp.com",
+  databaseURL: "https://grand-war-monitor-default-rtdb.firebaseio.com",
+  projectId: "grand-war-monitor",
+  storageBucket: "grand-war-monitor.firebasestorage.app",
+  messagingSenderId: "16814509264",
+  appId: "1:16814509264:web:5dcad8ec49928d13c362d5"
+};
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // グローバルに公開
+  window.fbDB = db;
+  window.fbRef = ref;
+  window.fbOnValue = onValue;
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
+  /* 元のスタイルを完全維持 */
   :root {
     --bg: #080b0f; --surface: #0f1318; --surface2: #161c24;
     --border: #252d3a; --border2: #1e2736; --text: #c8d8e8; --muted: #4a5568;
@@ -15,123 +39,45 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; min-height: 100vh; }
-
-  header { 
-    background: var(--surface); 
-    border-bottom: 1px solid var(--border); 
-    padding: 10px 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  
-  .status-bar {
-    background: var(--surface); 
-    border-bottom: 1px solid var(--border2);
-    padding: 5px 16px; 
-    display: flex; 
-    align-items: center; 
-    gap: 14px;
-    font-family: var(--mono); 
-    font-size: 11px; 
-    color: var(--muted);
-    position: sticky;
-    top: 103px;
-    z-index: 99;
-  }
-  @media (max-width: 630px) {
-    .status-bar { top: 138px; }
-  }
-
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; position: sticky; top: 0; z-index: 100; }
+  .status-bar { background: var(--surface); border-bottom: 1px solid var(--border2); padding: 5px 16px; display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); position: sticky; top: 103px; z-index: 99; }
+  @media (max-width: 630px) { .status-bar { top: 138px; } }
   .day-tabs { display: flex; gap: 4px; margin-left: 15px; }
-  .day-tab { 
-    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
-    padding: 2px 8px; border-radius: 3px; cursor: pointer; font-family: var(--mono); font-size: 10px;
-  }
+  .day-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-family: var(--mono); font-size: 10px; }
   .day-tab.active { border-color: var(--accent); color: var(--accent); background: #1a2030; }
   .day-tab.today { border-style: dashed; color: var(--text); }
-
   h1 { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ctrl-group { display: flex; align-items: center; gap: 5px; }
   label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-  select, input[type=number] {
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 8px; font-size: 12px;
-    font-family: var(--sans); border-radius: 3px; outline: none;
-  }
+  select, input[type=number] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; font-size: 12px; font-family: var(--sans); border-radius: 3px; outline: none; }
   select:focus, input[type=number]:focus { border-color: var(--accent); }
   input[type=number] { width: 75px; }
-  button {
-    background: var(--accent); border: 1px solid var(--accent);
-    color: #fff; padding: 5px 14px; font-size: 12px;
-    font-family: var(--sans); border-radius: 3px; cursor: pointer; font-weight: bold;
-  }
+  button { background: var(--accent); border: 1px solid var(--accent); color: #fff; padding: 5px 14px; font-size: 12px; font-family: var(--sans); border-radius: 3px; cursor: pointer; font-weight: bold; }
   button:hover { opacity: 0.85; }
   button.connected { background: var(--attack); border-color: var(--attack); }
   button.sec { background: transparent; border-color: var(--muted); color: var(--muted); font-weight: normal; }
   button.sec:hover { border-color: var(--text); color: var(--text); }
   .group-hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
   .group-hint a { color: var(--accent); text-decoration: none; }
-
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
   .dot.connected { background: var(--defense); animation: pulse 2s infinite; }
   .dot.error { background: var(--attack); }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
-  
-  #clock { 
-    margin-left: auto; 
-    font-size: 13px; 
-    color: var(--accent); 
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-
+  #clock { margin-left: auto; font-size: 13px; color: var(--accent); font-weight: bold; letter-spacing: 1px; }
   .main { padding: 12px 16px; }
   .api-error { background: #2a0a0a; border: 1px solid #5a2020; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #f87171; margin-bottom: 10px; display: none; white-space: pre-wrap; }
   .info-note { background: #0d1a2a; border: 1px solid #1a3a5a; border-radius: 4px; padding: 7px 12px; font-size: 11px; color: #6a9fd8; margin-bottom: 10px; }
   .legend { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
   .legend-item { display: flex; align-items: center; gap: 4px; }
   .lc { width: 9px; height: 9px; border-radius: 2px; }
-  
-  #tableContainer { 
-    width: 100%;
-    overflow-x: auto; 
-    -webkit-overflow-scrolling: touch; 
-  }
-  
-  table { 
-    width: 100%; 
-    border-collapse: separate;
-    border-spacing: 0;
-    font-family: var(--mono); 
-    font-size: 12px; 
-    min-width: 820px;
-  }
-
-  thead th { 
-    background: var(--surface2); 
-    box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2);
-    padding: 10px; 
-    text-align: left; 
-    color: var(--muted); 
-    font-size: 11px; 
-    white-space: nowrap; 
-    position: sticky; 
-    top: 0; 
-    z-index: 10; 
-  }
-
+  #tableContainer { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: 12px; min-width: 820px; }
+  thead th { background: var(--surface2); box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2); padding: 10px; text-align: left; color: var(--muted); font-size: 11px; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
   tbody tr { border-bottom: 1px solid var(--border2); }
   tbody tr:hover { background: var(--surface2); }
-  td { 
-    padding: 6px 10px; 
-    border-bottom: 1px solid var(--border2);
-    border-right: 1px solid var(--border2); 
-    white-space: nowrap; 
-  }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border2); border-right: 1px solid var(--border2); white-space: nowrap; }
   td:last-child { border-right: none; }
-
   .cid-cell { display: flex; align-items: center; gap: 8px; }
   .cid { color: var(--accent); font-weight: bold; min-width: 20px; text-align: center; }
   .cname { color: var(--text); font-family: var(--sans); font-size: 11px; }
@@ -145,11 +91,9 @@
   .tc{color:var(--text)} .tu{color:var(--muted);font-size:11px} .tn{color:var(--border)} .tf{color:var(--fallen)}
   .no-data { text-align: center; padding: 50px 20px; color: var(--muted); font-family: var(--mono); }
   .no-data span { display: block; font-size: 28px; margin-bottom: 10px; opacity: .25; }
-  
   #lookupResult { display: none; margin-bottom: 10px; }
   #lookupResult .title { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
   #groupList { display: flex; gap: 6px; flex-wrap: wrap; }
-
   .summary-section { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
   .summary-title { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
@@ -213,7 +157,7 @@
     <div id="groupList"></div>
   </div>
   <div class="info-note">
-    ℹ️ 曜日を選択すると過去の保存ログを閲覧できます。過去曜日ではログ時刻のみを表示します。
+    ℹ️ 曜日を選択するとクラウド(Firebase)およびローカルの保存ログを閲覧できます。
   </div>
   <div class="legend">
     <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
@@ -237,6 +181,7 @@ const GROUP_WORLDS = { 140: "W149, W150, W151, W152", 141: "W1, W7, W12, W19", 1
 
 let ws=null, wsConnected=false;
 let guilds={}, castles={};
+let attackStart = {}, defenseStart = {}, fallenStart = {};
 
 function getGvgDaySuffix() {
   const now = new Date();
@@ -248,14 +193,30 @@ function getGvgDaySuffix() {
 
 let currentDay = getGvgDaySuffix();
 let viewDay = getGvgDaySuffix();
-let attackStart = {};
-let defenseStart = {};
-let fallenStart = {};
+
+// クラウド同期（Firebase）
+function syncFirebase() {
+  const gr = document.getElementById('groupInput').value;
+  if (!gr || !window.fbDB) return;
+  
+  const path = `gvg_logs/G${gr}/${viewDay}`;
+  const logRef = window.fbRef(window.fbDB, path);
+  
+  window.fbOnValue(logRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    // クラウドデータをマージ
+    if (data.attack) attackStart = { ...attackStart, ...data.attack };
+    if (data.defense) defenseStart = { ...defenseStart, ...data.defense };
+    if (data.fallen) fallenStart = { ...fallenStart, ...data.fallen };
+    render();
+  });
+}
 
 function loadDayData(day) {
   attackStart = JSON.parse(localStorage.getItem(`gw_atk_${day}`) || '{}');
   defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
   fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
+  syncFirebase(); // 読み込み時にFirebaseも確認
 }
 
 function saveLog() {
@@ -292,7 +253,8 @@ const getUniqueKey = (cid) => {
   const gr = document.getElementById('groupInput').value || '0';
   const cl = document.getElementById('classSelect').value || '0';
   const bl = document.getElementById('blockSelect').value || '0';
-  return `g${gr}_c${cl}_b${bl}_id${cid}`;
+  // Firebaseのキーとして使えるよう、パス区切り文字などは避ける
+  return `${cid}`; 
 };
 
 loadDayData(viewDay);
@@ -408,6 +370,7 @@ function connect(){
   viewDay = currentDay;
   loadDayData(currentDay);
   updateDayTabs();
+  syncFirebase(); // 接続時にFirebase同期開始
 
   render();
   fetchInitial(gr,cl,bl);
