@@ -106,7 +106,7 @@
     border-spacing: 0;
     font-family: var(--mono); 
     font-size: 12px; 
-    min-width: 920px;
+    min-width: 820px;
   }
 
   thead th { 
@@ -318,12 +318,11 @@ const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 
-// ミリ秒スタンプを時刻表示に変換
 const fmtTime = (ts) => {
   if (!ts || ts === 0 || ts === '−') return '<span class="tn">−</span>';
   if (ts === 'before') return '<span class="tu">接続前</span>';
   const d = new Date(Number(ts));
-  if (isNaN(d.getTime())) return '<span class="tn">−</span>';
+  if (isNaN(d.getTime()) || d.getFullYear() < 2020) return '<span class="tn">−</span>';
   return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false })}</span>`;
 };
 
@@ -368,33 +367,24 @@ async function fetchInitial(gr,cl,bl){
     const j=await r.json();
     if(!j.data) return;
 
-    // AM4:00 (今日の開始) を基準にする
-    const todayReset = new Date();
-    todayReset.setHours(4, 0, 0, 0);
-    const todayThreshold = todayReset.getTime();
-
     if(j.data.guilds) for(const [id,name] of Object.entries(j.data.guilds)){
       const fi=parseInt(id); guilds[fi]=name; guilds[Math.floor(fi/1000)]=name;
     }
     if(j.data.castles) for(const c of j.data.castles){
       const cid=c.CastleId;
       const key = getUniqueKey(cid);
-      const serverFT = c.UtcFallenTimeStamp ? c.UtcFallenTimeStamp : 0; // これはUTCミリ秒
-
       castles[cid]={
         ownerGuildId:Math.floor((c.GuildId||0)/1000),
         attackerGuildId:Math.floor((c.AttackerGuildId||0)/1000),
-        fallenTs:serverFT,
+        fallenTs:c.UtcFallenTimeStamp?c.UtcFallenTimeStamp:0,
         defenseCount:c.DefensePartyCount||0,
         attackCount:c.AttackPartyCount||0,
-        state:c.GvgCastleState||0, koCount:0
+        state:c.GvgCastleState||0
       };
 
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
-        // 陥落時間が本日の開始以降のものなら保存
-        if(serverFT >= todayThreshold && !fallenStart[key]) fallenStart[key] = serverFT;
         saveLog();
       }
     }
@@ -470,7 +460,7 @@ function parseMsg(dv,buf){
       if(off+20>dv.byteLength) break;
       const og=dv.getUint32(off,true); off+=4;
       const ag=dv.getUint32(off,true); off+=4;
-      const ft=dv.getUint32(off,true); off+=4; // サーバーからの生FT
+      const ft=dv.getUint32(off,true); off+=4;
       const dc=dv.getUint16(off,true); off+=2;
       const ac=dv.getUint16(off,true); off+=2;
       const st=dv.getUint8(off); off+=2;
@@ -482,7 +472,6 @@ function parseMsg(dv,buf){
       
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
-        // 攻撃・防衛開始は「ブラウザ時刻」を記録
         if(ac > 0 && pv.attackCount === 0) {
           if(!attackStart[key] || attackStart[key] === 'before') {
             attackStart[key] = Date.now();
@@ -495,20 +484,16 @@ function parseMsg(dv,buf){
             logUpdated = true;
           }
         }
-        // 陥落時間は「状態が陥落(2)に変化した瞬間」のブラウザ時刻を記録
-        // これにより攻撃・防衛時間との整合性が100%保たれる
         if(st === 2 && pv.state !== 2) {
           if(!fallenStart[key]) {
             fallenStart[key] = Date.now();
             logUpdated = true;
           }
         }
-        // 陥落していない状態に戻った場合、ログを維持するかクリアするか選べますが、
-        // 今回は「過去ログ」用途なので、一度記録したらそのままにします
         if(logUpdated) saveLog();
       }
 
-      castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st,koCount:ko};
+      castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st};
       changed=true;
     }
   }
@@ -525,18 +510,17 @@ function render(){
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
     <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
-    <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th><th class="cnt">KO</th>
+    <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th>
   </tr></thead><tbody>`;
 
   for(const cid of cids){
-    const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0}) : {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0};
+    const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0}) : {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0};
     const cname = CNAMES[cid] || '???';
     const key = getUniqueKey(cid);
     
     if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    // 陥落ログを表示：保存されているブラウザ時刻を最優先
     const dispFal = fallenStart[key] ? Number(fallenStart[key]) : 0;
 
     h+=`<tr>
@@ -549,7 +533,6 @@ function render(){
       <td>${fmtTime(attackStart[key])}</td>
       <td>${fmtTime(defenseStart[key])}</td>
       <td class="${dispFal ? 'tf' : 'tn'}">${fmtTime(dispFal)}</td>
-      <td class="cnt cz">${isToday ? (c.koCount||0) : '−'}</td>
     </tr>`;
   }
   
