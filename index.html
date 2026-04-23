@@ -133,7 +133,7 @@
     <button id="lookupBtn" class="sec">グループID検索</button>
   </div>
   <div class="group-hint">
-    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「検索」で取得できます。
+    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「グループID検索」で取得できます。
   </div>
 </header>
 
@@ -157,7 +157,7 @@
     <div id="groupList"></div>
   </div>
   <div class="info-note">
-    ℹ️ 曜日を選択するとクラウド(Firebase)およびローカルの保存ログを閲覧できます。
+    ℹ️ 曜日を選択すると保存ログを閲覧できます。
   </div>
   <div class="legend">
     <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
@@ -379,7 +379,7 @@ function connect(){
   ws.onopen=()=>{
     wsConnected=true;
     setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
-    document.getElementById('connectBtn').textContent='更新';
+    document.getElementById('connectBtn').textContent='停止';
     document.getElementById('connectBtn').classList.add('connected');
     const buf=new ArrayBuffer(4);
     new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
