@@ -23,7 +23,7 @@
     padding: 10px 16px;
     position: sticky;
     top: 0;
-    z-index: 100; /* 最前面 */
+    z-index: 100;
   }
   
   .status-bar {
@@ -37,10 +37,9 @@
     font-size: 11px; 
     color: var(--muted);
     position: sticky;
-    top: 103px; /* デスクトップ時のヘッダー高さの目安 */
+    top: 103px; 
     z-index: 99;
   }
-  /* モバイルでヘッダーが折り返される場合の高さ調整 */
   @media (max-width: 630px) {
     .status-bar { top: 138px; }
   }
@@ -81,7 +80,6 @@
   .legend-item { display: flex; align-items: center; gap: 4px; }
   .lc { width: 9px; height: 9px; border-radius: 2px; }
   
-  /* --- テーブルコンテナ --- */
   #tableContainer { 
     width: 100%;
     overflow-x: auto; 
@@ -90,16 +88,15 @@
   
   table { 
     width: 100%; 
-    border-collapse: separate; /* stickyを安定させるためにseparate */
+    border-collapse: separate; 
     border-spacing: 0;
     font-family: var(--mono); 
     font-size: 12px; 
-    min-width: 920px; /* 名前追加に伴い最小幅を少し増加 */
+    min-width: 920px; 
   }
 
   thead th { 
     background: var(--surface2); 
-    /* borderの代わりにbox-shadowで枠線を表現 */
     box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2);
     padding: 10px; 
     text-align: left; 
@@ -138,6 +135,56 @@
   #lookupResult { display: none; margin-bottom: 10px; }
   #lookupResult .title { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
   #groupList { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* --- 集計セクション用スタイル --- */
+  .summary-section {
+    margin-bottom: 24px; /* テーブルとの間に余白を確保 */
+    border-bottom: 1px solid var(--border2); /* 区切り線 */
+    padding-bottom: 16px;
+  }
+  .summary-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 10px 12px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .summary-gname {
+    font-size: 12px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+  .summary-count {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  .summary-count span {
+    font-size: 10px;
+    margin-left: 4px;
+    color: var(--muted);
+  }
 </style>
 </head>
 <body>
@@ -189,7 +236,8 @@
   </div>
 
   <div class="info-note">
-    ℹ️ パーティ数が 0→1 になった瞬間を記録。接続前からの配置は「接続前」と表示。リアルタイムに変動します。
+    ℹ️ パーティ数が 0→1 になった瞬間を記録。接続前からの配置は「接続前」と表示。<br>
+    ℹ️ 各種換算：1パーティ = 2スタミナ(ST)として集計。
   </div>
   
   <div class="legend">
@@ -198,6 +246,8 @@
     <span class="legend-item"><span class="lc" style="background:var(--battle)"></span>宣戦</span>
     <span class="legend-item"><span class="lc" style="background:var(--fallen)"></span>陥落</span>
   </div>
+
+  <div id="summaryContainer"></div>
 
   <div id="tableContainer">
     <div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>
@@ -218,10 +268,8 @@ const CNAMES = {
 let ws=null, wsConnected=false;
 let guilds={}, castles={}, attackStart={}, defenseStart={};
 
-// Clock
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false}); }, 1000);
 
-// スマホでの固定位置を動的に計算（折り返し対応）
 function updateStickyPos() {
   const h = document.getElementById('header').offsetHeight;
   document.getElementById('statusBar').style.top = h + 'px';
@@ -229,11 +277,9 @@ function updateStickyPos() {
 window.addEventListener('resize', updateStickyPos);
 updateStickyPos();
 
-// Stream ID
 const mkSid=(cid,bl,gr,cl,wd)=>(cid&31)|((bl&7)<<5)|((gr&255)<<8)|((cl&7)<<16)|((wd&0x1FFF)<<19);
 const pSid=v=>({castleId:v&31,block:(v>>>5)&7,group:(v>>>8)&255,gvgClass:(v>>>16)&7,worldId:(v>>>19)&0x1FFF});
 
-// Helpers
 const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e.style.display='block'; };
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
@@ -242,10 +288,9 @@ const fmtStart=(v)=>v===undefined||v===null?'<span class="tn">−</span>':v==='b
 const setStat=(t,tx)=>{ 
   document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
   document.getElementById('statusText').textContent=tx;
-  updateStickyPos(); // 接続状況で高さが変わる可能性があるため
+  updateStickyPos();
 };
 
-// Group lookup
 document.getElementById('lookupBtn').addEventListener('click', async()=>{
   const btn=document.getElementById('lookupBtn');
   btn.disabled=true; btn.textContent='...'; hideErr();
@@ -271,7 +316,6 @@ document.getElementById('lookupBtn').addEventListener('click', async()=>{
   finally{ btn.disabled=false; btn.textContent='検索'; }
 });
 
-// Initial REST
 async function fetchInitial(gr,cl,bl){
   try {
     const r=await fetch(`${API}/wg/${gr}/globalgvg/${cl}/${bl}/latest`);
@@ -300,7 +344,6 @@ async function fetchInitial(gr,cl,bl){
   } catch(e){ err('初期データ取得失敗'); }
 }
 
-// WS
 function connect(){
   const gr=parseInt(document.getElementById('groupInput').value);
   const cl=parseInt(document.getElementById('classSelect').value);
@@ -378,16 +421,33 @@ function parseMsg(dv,buf){
 
 function render(){
   const ct=document.getElementById('tableContainer');
+  const st = document.getElementById('summaryContainer');
   const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
-  if(!cids.length){ ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; return; }
+  if(!cids.length){ 
+    ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; 
+    st.innerHTML='';
+    return; 
+  }
+
+  const summary = {};
+
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
     <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
     <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th><th class="cnt">KO</th>
   </tr></thead><tbody>`;
+
   for(const cid of cids){
     const c=castles[cid];
     const cname = CNAMES[cid] || '???';
+
+    if(c.ownerGuildId) {
+      summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + (c.defenseCount * 2);
+    }
+    if(c.attackerGuildId) {
+      summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + (c.attackCount * 2);
+    }
+
     h+=`<tr>
       <td>
         <div class="cid-cell">
@@ -407,6 +467,23 @@ function render(){
     </tr>`;
   }
   ct.innerHTML=h+'</tbody></table>';
+
+  // 合計配置数セクションの生成
+  let sh = `<div class="summary-section">
+    <div class="summary-title">▶ TOTAL ESTIMATED STAMINA (2 UNITS / PARTY)</div>
+    <div class="summary-grid">`;
+  
+  const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
+  
+  for(const gid of sortedGuilds) {
+    if(summary[gid] === 0) continue; 
+    sh += `<div class="summary-card">
+      <div class="summary-gname">${gName(gid)}</div>
+      <div class="summary-count">${summary[gid]}<span>ST</span></div>
+    </div>`;
+  }
+  sh += `</div></div>`;
+  st.innerHTML = sh;
 }
 </script>
 </body>
