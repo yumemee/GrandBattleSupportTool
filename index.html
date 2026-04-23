@@ -58,7 +58,7 @@
   button.connected { background: var(--attack); border-color: var(--attack); }
   button.sec { background: transparent; border-color: var(--muted); color: var(--muted); font-weight: normal; }
   button.sec:hover { border-color: var(--text); color: var(--text); }
-  .group-hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+  .group-hint { font-size: 10px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
   .group-hint a { color: var(--accent); text-decoration: none; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
   .dot.connected { background: var(--defense); animation: pulse 2s infinite; }
@@ -75,7 +75,6 @@
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: 12px; min-width: 820px; background: var(--bg); }
   thead th { background: var(--surface2); box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2); padding: 10px; text-align: left; color: var(--muted); font-size: 11px; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
   
-  /* 拠点列を固定 */
   thead th:first-child {
     position: sticky;
     left: 0;
@@ -88,7 +87,6 @@
   td { padding: 6px 10px; border-bottom: 1px solid var(--border2); border-right: 1px solid var(--border2); white-space: nowrap; }
   td:last-child { border-right: none; }
   
-  /* 1列目（拠点）を固定 */
   tbody td:first-child {
     position: sticky;
     left: 0;
@@ -97,7 +95,6 @@
     border-right: 1px solid var(--border);
   }
   
-  /* ホバー時の背景色も合わせる */
   tbody tr:hover td:first-child {
     background: var(--surface2);
   }
@@ -213,13 +210,8 @@ function getGvgDaySuffix() {
   const [datePart, timePart] = jstString.split(' ');
   const [year, month, day] = datePart.split('/');
   const [hour] = timePart.split(':');
-  
   const jstDate = new Date(`${year}-${month}-${day}T${timePart}`);
-  
-  if (parseInt(hour) < 4) {
-    jstDate.setDate(jstDate.getDate() - 1);
-  }
-  
+  if (parseInt(hour) < 4) { jstDate.setDate(jstDate.getDate() - 1); }
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   let d = days[jstDate.getDay()];
   return (d === "Mon") ? "Sun" : d;
@@ -232,11 +224,15 @@ function syncFirebase() {
   const gr = document.getElementById('groupInput').value;
   if (!gr || !window.fbDB) return;
   
-  const path = `gvg_logs/G${gr}/${viewDay}`;
+  // viewDayではなく現在の日付のみをFirebaseから取得するように修正
+  const path = `gvg_logs/G${gr}/${currentDay}`;
   const logRef = window.fbRef(window.fbDB, path);
   
   window.fbOnValue(logRef, (snapshot) => {
     const data = snapshot.val() || {};
+    // 表示中が当日でない場合はFirebaseのデータをマージしない
+    if (viewDay !== currentDay) return;
+
     if (data.attack) attackStart = { ...attackStart, ...data.attack };
     if (data.defense) defenseStart = { ...defenseStart, ...data.defense };
     if (data.fallen) fallenStart = { ...fallenStart, ...data.fallen };
@@ -249,10 +245,12 @@ function loadDayData(day) {
   defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
   fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
   prevDayCastles = JSON.parse(localStorage.getItem(`gw_castles_${day}`) || '{}');
-  syncFirebase();
+  if(day === currentDay) syncFirebase();
 }
 
 function saveLog() {
+  // 当日以外のデータは保存しないように保護
+  if(viewDay !== currentDay) return;
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
   localStorage.setItem(`gw_fal_${currentDay}`, JSON.stringify(fallenStart));
@@ -284,12 +282,7 @@ function checkDailyReset() {
   }
 }
 
-const getUniqueKey = (cid) => {
-  const gr = document.getElementById('groupInput').value || '0';
-  const cl = document.getElementById('classSelect').value || '0';
-  const bl = document.getElementById('blockSelect').value || '0';
-  return `${cid}`; 
-};
+const getUniqueKey = (cid) => `${cid}`; 
 
 loadDayData(viewDay);
 updateDayTabs();
@@ -380,12 +373,12 @@ async function fetchInitial(gr,cl,bl){
       };
 
       if(viewDay === currentDay) {
-        if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
-        if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
+        // 初期値としての 'before' は保存しないよう修正
+        if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='−';
+        if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='−';
         if(castles[cid].state===2 && c.UtcFallenTimeStamp && !fallenStart[key]) {
           fallenStart[key] = c.UtcFallenTimeStamp * 1000;
         }
-        saveLog();
       }
     }
     render();
@@ -434,13 +427,6 @@ document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(!confirm(`${viewDay}のログをリセットしますか？`)) return;
   attackStart = {}; defenseStart = {}; fallenStart = {};
-  if(wsConnected && viewDay === currentDay) {
-    for(let i in castles) {
-      const key = getUniqueKey(i);
-      if(castles[i].attackCount>0) attackStart[key]='before';
-      if(castles[i].defenseCount>0) defenseStart[key]='before';
-    }
-  }
   saveLog();
   render();
 });
@@ -468,32 +454,25 @@ function parseMsg(dv,buf){
       const ko=dv.getUint16(off,true); off+=2;
       const cid=p.castleId;
       const key = getUniqueKey(cid);
-      
       const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0, state:0};
       
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
-        if(ac > 0 && (pv.attackCount === 0 || !attackStart[key])) {
-          if(!attackStart[key] || attackStart[key] === 'before') {
-            attackStart[key] = Date.now();
-            logUpdated = true;
-          }
+        // 実際のパーティ数変動があったときのみ時刻を記録
+        if(ac > 0 && (pv.attackCount === 0 || !attackStart[key] || attackStart[key] === '−')) {
+           attackStart[key] = Date.now();
+           logUpdated = true;
         }
-        if(dc > 0 && (pv.defenseCount === 0 || !defenseStart[key])) {
-          if(!defenseStart[key] || defenseStart[key] === 'before') {
-            defenseStart[key] = Date.now();
-            logUpdated = true;
-          }
+        if(dc > 0 && (pv.defenseCount === 0 || !defenseStart[key] || defenseStart[key] === '−')) {
+           defenseStart[key] = Date.now();
+           logUpdated = true;
         }
         if(st === 2 && (pv.state !== 2 || !fallenStart[key])) {
-          if(!fallenStart[key]) {
-            fallenStart[key] = ft > 0 ? ft * 1000 : Date.now();
-            logUpdated = true;
-          }
+          fallenStart[key] = ft > 0 ? ft * 1000 : Date.now();
+          logUpdated = true;
         }
         if(logUpdated) saveLog();
       }
-
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st};
       changed=true;
     }
