@@ -79,11 +79,10 @@
   .dot.error { background: var(--attack); }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
   
-  /* 時計：中央配置用のスタイル */
   #clock { 
     margin-left: auto; 
     font-size: 13px; 
-    color: var(--accent); /* 時計をアクセントカラーで強調 */
+    color: var(--accent); 
     font-weight: bold;
     letter-spacing: 1px;
   }
@@ -300,7 +299,6 @@ const getUniqueKey = (cid) => {
 loadDayData(viewDay);
 updateDayTabs();
 
-// 時計更新
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false});
   checkDailyReset(); 
@@ -319,8 +317,15 @@ const pSid=v=>({castleId:v&31,block:(v>>>5)&7,group:(v>>>8)&255,gvgClass:(v>>>16
 const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e.style.display='block'; };
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
-const fmtSec=(s)=>s?new Date(s*1000).toLocaleTimeString('ja-JP',{hour12:false}):'−';
-const fmtStart=(v)=>v===undefined||v===null||v==='−'?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
+
+// ミリ秒スタンプを時刻文字列に変換
+const fmtTime = (ts) => {
+  if (!ts || ts === '−') return '<span class="tn">−</span>';
+  if (ts === 'before') return '<span class="tu">接続前</span>';
+  const d = new Date(ts);
+  return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false })}</span>`;
+};
+
 const setStat=(t,tx)=>{ 
   document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
   document.getElementById('statusText').textContent=tx;
@@ -378,7 +383,8 @@ async function fetchInitial(gr,cl,bl){
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
-        if(castles[cid].fallenTs>0 && !fallenStart[key]) fallenStart[key]=castles[cid].fallenTs * 1000;
+        // サーバーから届いた陥落時間があればミリ秒にして保存
+        if(castles[cid].fallenTs>0 && !fallenStart[key]) fallenStart[key] = castles[cid].fallenTs * 1000;
         saveLog();
       }
     }
@@ -432,7 +438,7 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
       const key = getUniqueKey(i);
       if(castles[i].attackCount>0) attackStart[key]='before';
       if(castles[i].defenseCount>0) defenseStart[key]='before';
-      if(castles[i].fallenTs>0) fallenStart[key]=castles[i].fallenTs * 1000;
+      if(castles[i].fallenTs>0) fallenStart[key] = castles[i].fallenTs * 1000;
     }
   }
   saveLog();
@@ -465,7 +471,7 @@ function parseMsg(dv,buf){
       
       const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0};
       
-      if(currentDay === getGvgDaySuffix()) {
+      if(viewDay === currentDay) {
         let logUpdated = false;
         if(ac > 0 && pv.attackCount === 0) {
           if(!attackStart[key] || attackStart[key] === 'before') {
@@ -479,6 +485,7 @@ function parseMsg(dv,buf){
             logUpdated = true;
           }
         }
+        // 陥落検知 (0→1以上の瞬間) または 状態変化
         if(ft > 0 && pv.fallenTs === 0) {
           if(!fallenStart[key]) {
             fallenStart[key] = ft * 1000;
@@ -517,7 +524,8 @@ function render(){
     if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    const displayFallen = fallenStart[key] ? fallenStart[key] / 1000 : (isToday ? c.fallenTs : 0);
+    // 陥落時刻の決定：保存データ(ミリ秒)優先、なければサーバー生データ(秒→ミリ秒)
+    const displayFallenTs = fallenStart[key] ? fallenStart[key] : (isToday && c.fallenTs ? c.fallenTs * 1000 : 0);
 
     h+=`<tr>
       <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
@@ -526,9 +534,9 @@ function render(){
       <td>${isToday ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td>
       <td class="cnt ${isToday && c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td>
       <td class="cnt ${isToday && c.defenseCount>0?'cd':'cz'}">${isToday ? c.defenseCount : '−'}</td>
-      <td>${fmtStart(attackStart[key])}</td>
-      <td>${fmtStart(defenseStart[key])}</td>
-      <td class="${displayFallen?'tf':'tn'}">${fmtSec(displayFallen)}</td>
+      <td>${fmtTime(attackStart[key])}</td>
+      <td>${fmtTime(defenseStart[key])}</td>
+      <td class="${displayFallenTs?'tf':'tn'}">${fmtTime(displayFallenTs)}</td>
       <td class="cnt cz">${isToday ? (c.koCount||0) : '−'}</td>
     </tr>`;
   }
