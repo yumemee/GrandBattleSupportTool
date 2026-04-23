@@ -15,7 +15,36 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; }
+
+  /* --- 固定ヘッダーセクション --- */
+  header { 
+    background: var(--surface); 
+    border-bottom: 1px solid var(--border); 
+    padding: 10px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100; /* 最前面 */
+  }
+  
+  .status-bar {
+    background: var(--surface); 
+    border-bottom: 1px solid var(--border2);
+    padding: 5px 16px; 
+    display: flex; 
+    align-items: center; 
+    gap: 14px;
+    font-family: var(--mono); 
+    font-size: 11px; 
+    color: var(--muted);
+    position: sticky;
+    top: 103px; /* デスクトップ時のヘッダー高さの目安 */
+    z-index: 99;
+  }
+  /* モバイルでヘッダーが折り返される場合の高さ調整 */
+  @media (max-width: 630px) {
+    .status-bar { top: 138px; }
+  }
+
   h1 { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ctrl-group { display: flex; align-items: center; gap: 5px; }
@@ -38,32 +67,60 @@
   button.sec:hover { border-color: var(--text); color: var(--text); }
   .group-hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
   .group-hint a { color: var(--accent); text-decoration: none; }
-  .status-bar {
-    background: var(--surface); border-bottom: 1px solid var(--border2);
-    padding: 5px 16px; display: flex; align-items: center; gap: 14px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-  }
+
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
   .dot.connected { background: var(--defense); animation: pulse 2s infinite; }
   .dot.error { background: var(--attack); }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
   #clock { margin-left: auto; font-size: 12px; color: var(--text); }
+
   .main { padding: 12px 16px; }
   .api-error { background: #2a0a0a; border: 1px solid #5a2020; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #f87171; margin-bottom: 10px; display: none; white-space: pre-wrap; }
   .info-note { background: #0d1a2a; border: 1px solid #1a3a5a; border-radius: 4px; padding: 7px 12px; font-size: 11px; color: #6a9fd8; margin-bottom: 10px; }
   .legend { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
   .legend-item { display: flex; align-items: center; gap: 4px; }
   .lc { width: 9px; height: 9px; border-radius: 2px; }
-  #lookupResult { display: none; margin-bottom: 10px; }
-  #lookupResult .title { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
-  #groupList { display: flex; gap: 6px; flex-wrap: wrap; }
-  #groupList button { font-size: 11px; padding: 3px 8px; font-family: var(--mono); }
-  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
-  thead th { background: var(--surface2); border: 1px solid var(--border); padding: 7px 10px; text-align: left; color: var(--muted); font-size: 11px; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+  
+  /* --- テーブルコンテナ --- */
+  #tableContainer { 
+    width: 100%;
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+  }
+  
+  table { 
+    width: 100%; 
+    border-collapse: separate; /* stickyを安定させるためにseparate */
+    border-spacing: 0;
+    font-family: var(--mono); 
+    font-size: 12px; 
+    min-width: 850px; /* スマホで表が潰れないよう最小幅を確保 */
+  }
+
+  thead th { 
+    background: var(--surface2); 
+    /* borderの代わりにbox-shadowで枠線を表現 */
+    box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2);
+    padding: 10px; 
+    text-align: left; 
+    color: var(--muted); 
+    font-size: 11px; 
+    white-space: nowrap; 
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+  }
+
   tbody tr { border-bottom: 1px solid var(--border2); }
   tbody tr:hover { background: var(--surface2); }
-  td { padding: 6px 10px; border-right: 1px solid var(--border2); white-space: nowrap; }
+  td { 
+    padding: 6px 10px; 
+    border-bottom: 1px solid var(--border2);
+    border-right: 1px solid var(--border2); 
+    white-space: nowrap; 
+  }
   td:last-child { border-right: none; }
+
   .cid { color: var(--accent); font-weight: bold; text-align: center; }
   .guild { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
   .atk-g { color: var(--attack); }
@@ -75,10 +132,14 @@
   .tc{color:var(--text)} .tu{color:var(--muted);font-size:11px} .tn{color:var(--border)} .tf{color:var(--fallen)}
   .no-data { text-align: center; padding: 50px 20px; color: var(--muted); font-family: var(--mono); }
   .no-data span { display: block; font-size: 28px; margin-bottom: 10px; opacity: .25; }
+  
+  #lookupResult { display: none; margin-bottom: 10px; }
+  #lookupResult .title { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
+  #groupList { display: flex; gap: 6px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
-<header>
+<header id="header">
   <h1>▶ GRAND WAR MONITOR</h1>
   <div class="controls">
     <div class="ctrl-group">
@@ -103,15 +164,15 @@
       </select>
     </div>
     <button id="connectBtn">接続</button>
-    <button id="resetBtn" class="sec">タイムリセット</button>
-    <button id="lookupBtn" class="sec">グループ検索</button>
+    <button id="resetBtn" class="sec">リセット</button>
+    <button id="lookupBtn" class="sec">検索</button>
   </div>
   <div class="group-hint">
-    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「グループ検索」で取得できます。
+    ID確認: <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a>
   </div>
 </header>
 
-<div class="status-bar">
+<div class="status-bar" id="statusBar">
   <span><span class="dot" id="statusDot"></span><span id="statusText">未接続</span></span>
   <span id="matchInfo"></span>
   <span id="clock"></span>
@@ -121,20 +182,21 @@
   <div class="api-error" id="apiError"></div>
 
   <div id="lookupResult">
-    <div class="title">グループ一覧（globalgvg が有効なもの）:</div>
+    <div class="title">グループ一覧:</div>
     <div id="groupList"></div>
   </div>
 
   <div class="info-note">
-    ℹ️ <b>開始時間</b>はパーティ数が <b>0 → 1以上</b> に変化した瞬間を記録します。接続前から配置済みの場合は「接続前」と表示されます。
+    ℹ️ パーティ数が 0→1 になった瞬間を記録。接続前からの配置は「接続前」と表示。
   </div>
+  
   <div class="legend">
     <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
     <span class="legend-item"><span class="lc" style="background:var(--defense)"></span>防衛</span>
-    <span class="legend-item"><span class="lc" style="background:var(--battle)"></span>宣戦中</span>
+    <span class="legend-item"><span class="lc" style="background:var(--battle)"></span>宣戦</span>
     <span class="legend-item"><span class="lc" style="background:var(--fallen)"></span>陥落</span>
-    <span class="legend-item"><span class="lc" style="background:var(--defense);opacity:.5"></span>反撃成功</span>
   </div>
+
   <div id="tableContainer">
     <div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>
   </div>
@@ -151,6 +213,14 @@ let guilds={}, castles={}, attackStart={}, defenseStart={};
 // Clock
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false}); }, 1000);
 
+// スマホでの固定位置を動的に計算（折り返し対応）
+function updateStickyPos() {
+  const h = document.getElementById('header').offsetHeight;
+  document.getElementById('statusBar').style.top = h + 'px';
+}
+window.addEventListener('resize', updateStickyPos);
+updateStickyPos();
+
 // Stream ID
 const mkSid=(cid,bl,gr,cl,wd)=>(cid&31)|((bl&7)<<5)|((gr&255)<<8)|((cl&7)<<16)|((wd&0x1FFF)<<19);
 const pSid=v=>({castleId:v&31,block:(v>>>5)&7,group:(v>>>8)&255,gvgClass:(v>>>16)&7,worldId:(v>>>19)&0x1FFF});
@@ -161,12 +231,16 @@ const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 const fmtSec=(s)=>s?new Date(s*1000).toLocaleTimeString('ja-JP',{hour12:false}):'−';
 const fmtStart=(v)=>v===undefined||v===null?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
-const setStat=(t,tx)=>{ document.getElementById('statusDot').className='dot'+(t?' '+t:''); document.getElementById('statusText').textContent=tx; };
+const setStat=(t,tx)=>{ 
+  document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
+  document.getElementById('statusText').textContent=tx;
+  updateStickyPos(); // 接続状況で高さが変わる可能性があるため
+};
 
 // Group lookup
 document.getElementById('lookupBtn').addEventListener('click', async()=>{
   const btn=document.getElementById('lookupBtn');
-  btn.disabled=true; btn.textContent='取得中...'; hideErr();
+  btn.disabled=true; btn.textContent='...'; hideErr();
   try {
     const r=await fetch(`${API}/wgroups`);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -175,18 +249,18 @@ document.getElementById('lookupBtn').addEventListener('click', async()=>{
     const res=document.getElementById('lookupResult');
     const list=document.getElementById('groupList');
     list.innerHTML='';
-    if(!gs.length){ list.innerHTML='<span style="color:var(--muted);font-size:11px">データなし</span>'; }
+    if(!gs.length){ list.innerHTML='<span style="color:var(--muted)">データなし</span>'; }
     else gs.forEach(g=>{
-      const worlds=(g.worlds||[]).map(w=>{const s=Math.floor(w/1000),n=w%1000;return(['','JP','KR','AP','US','EU','GL'][s]||s)+'W'+n;}).join(', ');
       const b=document.createElement('button');
       b.className='sec'; b.style.cssText='font-size:11px;padding:3px 8px;font-family:var(--mono)';
-      b.textContent=`#${g.group_id} (${worlds})`;
-      b.onclick=()=>{ document.getElementById('groupInput').value=g.group_id; res.style.display='none'; };
+      b.textContent=`#${g.group_id}`;
+      b.onclick=()=>{ document.getElementById('groupInput').value=g.group_id; res.style.display='none'; updateStickyPos(); };
       list.appendChild(b);
     });
     res.style.display='block';
-  } catch(e){ err('グループ一覧取得失敗: '+e.message+'\n直接グループIDを入力してください。'); }
-  finally{ btn.disabled=false; btn.textContent='グループ検索'; }
+    updateStickyPos();
+  } catch(e){ err('取得失敗'); }
+  finally{ btn.disabled=false; btn.textContent='検索'; }
 });
 
 // Initial REST
@@ -197,7 +271,7 @@ async function fetchInitial(gr,cl,bl){
     const j=await r.json();
     if(!j.data) return;
     const mn=j.data.matching_number;
-    document.getElementById('matchInfo').textContent=mn?`Matching #${mn}`:'';
+    document.getElementById('matchInfo').textContent=mn?`Match#${mn}`:'';
     if(j.data.guilds) for(const [id,name] of Object.entries(j.data.guilds)){
       const fi=parseInt(id); guilds[fi]=name; guilds[Math.floor(fi/1000)]=name;
     }
@@ -215,7 +289,7 @@ async function fetchInitial(gr,cl,bl){
       if(castles[cid].defenseCount>0&&!defenseStart[cid]) defenseStart[cid]='before';
     }
     render();
-  } catch(e){ err('初期データ取得失敗: '+e.message); }
+  } catch(e){ err('初期データ取得失敗'); }
 }
 
 // WS
@@ -223,7 +297,7 @@ function connect(){
   const gr=parseInt(document.getElementById('groupInput').value);
   const cl=parseInt(document.getElementById('classSelect').value);
   const bl=parseInt(document.getElementById('blockSelect').value);
-  if(!gr||isNaN(gr)){ err('グループIDを入力してください'); return; }
+  if(!gr||isNaN(gr)){ err('グループIDを入力'); return; }
   hideErr();
   if(ws){ ws.close(); ws=null; }
   guilds={}; castles={}; attackStart={}; defenseStart={};
@@ -235,8 +309,7 @@ function connect(){
   ws.binaryType='arraybuffer';
   ws.onopen=()=>{
     wsConnected=true;
-    const clName=['Elite Class','Expert Class','Grand Master'][cl-1];
-    setStat('connected',`接続済み (Group ${gr} / ${clName} / Block ${'ABCD'[bl]})`);
+    setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
     document.getElementById('connectBtn').textContent='切断';
     document.getElementById('connectBtn').classList.add('connected');
     const buf=new ArrayBuffer(4);
@@ -244,17 +317,15 @@ function connect(){
     ws.send(buf);
   };
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
-  ws.onerror=()=>{ setStat('error','WebSocket エラー'); err('WebSocket接続エラーが発生しました。'); };
   ws.onclose=(e)=>{
     wsConnected=false;
-    setStat('','切断 (code: '+e.code+')');
+    setStat('','切断');
     document.getElementById('connectBtn').textContent='接続';
     document.getElementById('connectBtn').classList.remove('connected');
   };
 }
 
 document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(ws.close(),ws=null):connect());
-document.getElementById('groupInput').addEventListener('keydown',e=>e.key==='Enter'&&connect());
 document.getElementById('resetBtn').addEventListener('click',()=>{
   attackStart={}; defenseStart={};
   for(const[k,c] of Object.entries(castles)){
@@ -265,7 +336,6 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
   render();
 });
 
-// Parse WS message
 function parseMsg(dv,buf){
   let off=0,changed=false;
   while(off+4<=dv.byteLength){
@@ -275,9 +345,7 @@ function parseMsg(dv,buf){
       if(off+4>dv.byteLength) break;
       const gid=dv.getUint32(off,true); off+=4;
       if(!gid) continue;
-      if(off+1>dv.byteLength) break;
       const nl=dv.getUint8(off); off+=1;
-      if(off+nl>dv.byteLength) break;
       guilds[gid]=new TextDecoder().decode(new Uint8Array(buf,off,nl)); off+=nl;
       changed=true;
     } else {
@@ -291,9 +359,8 @@ function parseMsg(dv,buf){
       const ko=dv.getUint16(off,true); off+=2;
       const cid=p.castleId;
       const pv=castles[cid]||{};
-      const now=Date.now();
-      if(ac>0&&!(pv.attackCount>0)&&!attackStart[cid]) attackStart[cid]=now;
-      if(dc>0&&!(pv.defenseCount>0)&&!defenseStart[cid]) defenseStart[cid]=now;
+      if(ac>0&&!(pv.attackCount>0)&&!attackStart[cid]) attackStart[cid]=Date.now();
+      if(dc>0&&!(pv.defenseCount>0)&&!defenseStart[cid]) defenseStart[cid]=Date.now();
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st,koCount:ko};
       changed=true;
     }
@@ -301,15 +368,14 @@ function parseMsg(dv,buf){
   if(changed) render();
 }
 
-// Render
 function render(){
   const ct=document.getElementById('tableContainer');
   const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
-  if(!cids.length){ ct.innerHTML='<div class="no-data"><span>🏰</span>データを待機中...</div>'; return; }
+  if(!cids.length){ ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; return; }
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
-    <th style="text-align:center">攻撃<br>Party</th><th style="text-align:center">防衛<br>Party</th>
-    <th>🗡 攻撃開始</th><th>🛡 防衛開始</th><th>陥落時間</th><th style="text-align:center">KO</th>
+    <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
+    <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th><th class="cnt">KO</th>
   </tr></thead><tbody>`;
   for(const cid of cids){
     const c=castles[cid];
