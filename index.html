@@ -23,7 +23,7 @@
     padding: 10px 16px;
     position: sticky;
     top: 0;
-    z-index: 100; /* 最前面 */
+    z-index: 100;
   }
   
   .status-bar {
@@ -37,10 +37,9 @@
     font-size: 11px; 
     color: var(--muted);
     position: sticky;
-    top: 103px; /* デスクトップ時のヘッダー高さの目安 */
+    top: 103px;
     z-index: 99;
   }
-  /* モバイルでヘッダーが折り返される場合の高さ調整 */
   @media (max-width: 630px) {
     .status-bar { top: 138px; }
   }
@@ -90,16 +89,15 @@
   
   table { 
     width: 100%; 
-    border-collapse: separate; /* stickyを安定させるためにseparate */
+    border-collapse: separate;
     border-spacing: 0;
     font-family: var(--mono); 
     font-size: 12px; 
-    min-width: 920px; /* 名前追加に伴い最小幅を少し増加 */
+    min-width: 920px;
   }
 
   thead th { 
     background: var(--surface2); 
-    /* borderの代わりにbox-shadowで枠線を表現 */
     box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2);
     padding: 10px; 
     text-align: left; 
@@ -141,9 +139,9 @@
 
   /* --- 集計セクション用スタイル --- */
   .summary-section {
-    margin-top: 24px;
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
+    margin-bottom: 24px; /* 下に余白 */
+    border-bottom: 1px solid var(--border); /* 下線に変更 */
+    padding-bottom: 16px;
   }
   .summary-title {
     font-family: var(--mono);
@@ -249,11 +247,11 @@
     <span class="legend-item"><span class="lc" style="background:var(--fallen)"></span>陥落</span>
   </div>
 
+  <div id="summaryContainer"></div>
+  
   <div id="tableContainer">
     <div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>
   </div>
-
-  <div id="summaryContainer"></div>
 </div>
 
 <script>
@@ -270,7 +268,6 @@ const CNAMES = {
 let ws=null, wsConnected=false;
 let guilds={}, castles={}, attackStart={}, defenseStart={};
 
-// Clock
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false}); }, 1000);
 
 function updateStickyPos() {
@@ -426,15 +423,14 @@ function render(){
   const ct=document.getElementById('tableContainer');
   const st = document.getElementById('summaryContainer');
   const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
+  
   if(!cids.length){ 
     ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; 
     st.innerHTML='';
     return; 
   }
 
-  // 集計用オブジェクト
   const summary = {};
-
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
     <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
@@ -445,7 +441,6 @@ function render(){
     const c=castles[cid];
     const cname = CNAMES[cid] || '???';
 
-    // 集計ロジック：所有ギルド(防衛)と攻撃ギルドのパーティを加算
     if(c.ownerGuildId) {
       summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     }
@@ -471,25 +466,26 @@ function render(){
       <td class="cnt cz">${c.koCount||0}</td>
     </tr>`;
   }
-  ct.innerHTML=h+'</tbody></table>';
-
-  // 集計セクションの表示
+  
+  // 集計セクションのHTML作成
   let sh = `<div class="summary-section">
     <div class="summary-title">▶ TOTAL ACTIVE PARTIES (ON MAP)</div>
     <div class="summary-grid">`;
   
-  // ギルド名順にソートして表示
   const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
   
   for(const gid of sortedGuilds) {
-    if(summary[gid] === 0) continue; // 配置0のギルドは表示しない
+    if(summary[gid] === 0) continue; 
     sh += `<div class="summary-card">
       <div class="summary-gname">${gName(gid)}</div>
       <div class="summary-count">${summary[gid]}<span>P</span></div>
     </div>`;
   }
   sh += `</div></div>`;
+
+  // 描画実行：集計を先に、テーブルを後に
   st.innerHTML = sh;
+  ct.innerHTML = h + '</tbody></table>';
 }
 </script>
 </body>
