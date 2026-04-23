@@ -287,10 +287,9 @@ loadDayData(viewDay);
 updateDayTabs();
 
 setInterval(() => {
-  // UTC+9（日本時間）で表示
+  // Asia/Tokyoタイムゾーンで日本時間に統一
   const now = new Date();
-  const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000 - now.getTimezoneOffset() * 60 * 1000));
-  document.getElementById('clock').textContent = jstTime.toLocaleTimeString('ja-JP',{hour12:false});
+  document.getElementById('clock').textContent = now.toLocaleTimeString('ja-JP', { hour12: false, timeZone: 'Asia/Tokyo' });
   checkDailyReset(); 
 }, 1000);
 
@@ -314,9 +313,8 @@ const fmtTime = (ts) => {
   if (ts === 'before') return '<span class="tu">接続前</span>';
   const d = new Date(Number(ts));
   if (isNaN(d.getTime())) return '<span class="tn">−</span>';
-  // UTC+9（日本時間）に変換
-  const jstTime = new Date(d.getTime() + (9 * 60 * 60 * 1000 - d.getTimezoneOffset() * 60 * 1000));
-  return `<span class="tc">${jstTime.toLocaleTimeString('ja-JP', { hour12: false })}</span>`;
+  // Asia/Tokyoタイムゾーンで日本時間に統一
+  return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false, timeZone: 'Asia/Tokyo' })}</span>`;
 };
 
 const setStat=(t,tx)=>{ 
