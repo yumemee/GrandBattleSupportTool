@@ -237,7 +237,7 @@
   </div>
 
   <div class="info-note">
-    ℹ️ パーティ数が 0→1 になった瞬間を記録。接続前からの配置は「接続前」と表示。
+    ℹ️ パーティ数が 0→1 になった瞬間を記録。ブラウザを閉じてもリセットするまで保持されます。
   </div>
   
   <div class="legend">
@@ -258,7 +258,6 @@
 const API = 'https://api.mentemori.icu';
 const WS_URL = 'wss://api.mentemori.icu/gvg';
 const SL = {0:'−',1:'宣戦中',2:'陥落',3:'反撃',4:'反撃成功'};
-// 拠点名の修正を反映
 const CNAMES = {
   1:'アイン', 2:'イエソド', 3:'マルクト', 4:'ケテル', 5:'テファレト',
   6:'クシュル', 7:'シトリ', 8:'トパズ', 9:'メラル', 10:'ペリド',
@@ -266,7 +265,6 @@ const CNAMES = {
   16:'ラペン', 17:'ジルコン', 18:'オニキス', 19:'フロライト', 20:'ガネット', 21:'ルラ'
 };
 
-// グループ構成データ
 const GROUP_WORLDS = {
   140: "W149, W150, W151, W152", 141: "W1, W7, W12, W19", 142: "W2, W8, W20, W27",
   143: "W3, W4, W13, W31", 144: "W5, W9, W21, W30", 145: "W6, W14, W15, W32",
@@ -285,7 +283,16 @@ const GROUP_WORLDS = {
 };
 
 let ws=null, wsConnected=false;
-let guilds={}, castles={}, attackStart={}, defenseStart={};
+let guilds={}, castles={};
+
+// --- 永続化ストレージの初期化 ---
+let attackStart = JSON.parse(localStorage.getItem('gw_attackStart') || '{}');
+let defenseStart = JSON.parse(localStorage.getItem('gw_defenseStart') || '{}');
+
+const saveLog = () => {
+  localStorage.setItem('gw_attackStart', JSON.stringify(attackStart));
+  localStorage.setItem('gw_defenseStart', JSON.stringify(defenseStart));
+};
 
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false}); }, 1000);
 
@@ -303,7 +310,7 @@ const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 const fmtSec=(s)=>s?new Date(s*1000).toLocaleTimeString('ja-JP',{hour12:false}):'−';
-const fmtStart=(v)=>v===undefined||v===null?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
+const fmtStart=(v)=>v===undefined||v===null||v==='−'?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
 const setStat=(t,tx)=>{ 
   document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
   document.getElementById('statusText').textContent=tx;
@@ -325,7 +332,6 @@ document.getElementById('lookupBtn').addEventListener('click', async()=>{
     else gs.forEach(g=>{
       const b=document.createElement('button');
       b.className='sec'; 
-      // G番号+ワールド情報を表示
       const gId = g.group_id;
       const wInfo = GROUP_WORLDS[gId] ? ` (${GROUP_WORLDS[gId]})` : "";
       b.style.cssText='font-size:11px;padding:6px 12px;font-family:var(--mono);text-align:left;white-space:nowrap;';
@@ -360,9 +366,10 @@ async function fetchInitial(gr,cl,bl){
         attackCount:c.AttackPartyCount||0,
         state:c.GvgCastleState||0, koCount:0
       };
-      if(castles[cid].attackCount>0&&!attackStart[cid]) attackStart[cid]='before';
-      if(castles[cid].defenseCount>0&&!defenseStart[cid]) defenseStart[cid]='before';
+      if(castles[cid].attackCount>0 && !attackStart[cid]) attackStart[cid]='before';
+      if(castles[cid].defenseCount>0 && !defenseStart[cid]) defenseStart[cid]='before';
     }
+    saveLog();
     render();
   } catch(e){ err('初期データ取得失敗'); }
 }
@@ -374,7 +381,7 @@ function connect(){
   if(!gr||isNaN(gr)){ err('グループIDを入力'); return; }
   hideErr();
   if(ws){ ws.close(); ws=null; }
-  guilds={}; castles={}; attackStart={}; defenseStart={};
+  guilds={}; castles={}; 
   document.getElementById('matchInfo').textContent='';
   setStat('connecting','接続中...');
   render();
@@ -400,13 +407,18 @@ function connect(){
 }
 
 document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(ws.close(),ws=null):connect());
+
 document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('全ての開始ログを消去してリセットしますか？')) return;
   attackStart={}; defenseStart={};
+  localStorage.removeItem('gw_attackStart');
+  localStorage.removeItem('gw_defenseStart');
   for(const[k,c] of Object.entries(castles)){
     const cid=parseInt(k);
     if(c.attackCount>0) attackStart[cid]='before';
     if(c.defenseCount>0) defenseStart[cid]='before';
   }
+  saveLog();
   render();
 });
 
@@ -432,9 +444,27 @@ function parseMsg(dv,buf){
       const st=dv.getUint8(off); off+=2;
       const ko=dv.getUint16(off,true); off+=2;
       const cid=p.castleId;
-      const pv=castles[cid]||{};
-      if(ac>0&&!(pv.attackCount>0)&&!attackStart[cid]) attackStart[cid]=Date.now();
-      if(dc>0&&!(pv.defenseCount>0)&&!defenseStart[cid]) defenseStart[cid]=Date.now();
+      
+      const pv=castles[cid]||{attackCount:0, defenseCount:0};
+      
+      let logUpdated = false;
+      // 攻撃P 0->1 変化判定
+      if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
+        if(!attackStart[cid] || attackStart[cid] === 'before') {
+          attackStart[cid] = Date.now();
+          logUpdated = true;
+        }
+      }
+      // 防衛P 0->1 変化判定
+      if(dc > 0 && (pv.defenseCount === 0 || pv.defenseCount === undefined)) {
+        if(!defenseStart[cid] || defenseStart[cid] === 'before') {
+          defenseStart[cid] = Date.now();
+          logUpdated = true;
+        }
+      }
+      
+      if(logUpdated) saveLog();
+
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st,koCount:ko};
       changed=true;
     }
@@ -447,8 +477,8 @@ function render(){
   const st = document.getElementById('summaryContainer');
   const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
   
-  if(!cids.length){ 
-    ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; 
+  if(!cids.length && Object.keys(castles).length === 0){ 
+    ct.innerHTML='<div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>'; 
     st.innerHTML='';
     return; 
   }
@@ -464,20 +494,11 @@ function render(){
     const c=castles[cid];
     const cname = CNAMES[cid] || '???';
 
-    if(c.ownerGuildId) {
-      summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
-    }
-    if(c.attackerGuildId) {
-      summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
-    }
+    if(c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
+    if(c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
     h+=`<tr>
-      <td>
-        <div class="cid-cell">
-          <span class="cid">${cid}</span>
-          <span class="cname">${cname}</span>
-        </div>
-      </td>
+      <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
       <td class="guild">${gName(c.ownerGuildId)}</td>
       <td class="guild atk-g">${c.attackerGuildId?gName(c.attackerGuildId):'<span class="tn">−</span>'}</td>
       <td><span class="badge s${c.state}">${SL[c.state]||c.state}</span></td>
@@ -493,9 +514,7 @@ function render(){
   let sh = `<div class="summary-section">
     <div class="summary-title">▶ TOTAL ACTIVE PARTIES (配置済みパーティ数)</div>
     <div class="summary-grid">`;
-  
   const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
-  
   for(const gid of sortedGuilds) {
     if(summary[gid] === 0) continue; 
     sh += `<div class="summary-card">
@@ -507,6 +526,11 @@ function render(){
 
   st.innerHTML = sh;
   ct.innerHTML = h + '</tbody></table>';
+}
+
+// 起動時に保存データがあれば描画
+if(Object.keys(attackStart).length > 0 || Object.keys(defenseStart).length > 0) {
+  render();
 }
 </script>
 </body>
