@@ -411,7 +411,7 @@ function connect(){
   ws.onopen=()=>{
     wsConnected=true;
     setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
-    document.getElementById('connectBtn').textContent='更新';
+    document.getElementById('connectBtn').textContent='変更';
     document.getElementById('connectBtn').classList.add('connected');
     const buf=new ArrayBuffer(4);
     new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
@@ -420,7 +420,7 @@ function connect(){
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
   ws.onclose=(e)=>{
     wsConnected=false;
-    setStat('','更新');
+    setStat('','変更');
     document.getElementById('connectBtn').textContent='接続';
     document.getElementById('connectBtn').classList.remove('connected');
   };
