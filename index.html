@@ -8,20 +8,18 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // --- Firebase設定をここに貼り付け ---
   const firebaseConfig = {
-  apiKey: "AIzaSyCBuEBsIBE8hhU50epc8CtyeJn_gQLM2rc",
-  authDomain: "grand-war-monitor.firebaseapp.com",
-  databaseURL: "https://grand-war-monitor-default-rtdb.firebaseio.com",
-  projectId: "grand-war-monitor",
-  storageBucket: "grand-war-monitor.firebasestorage.app",
-  messagingSenderId: "16814509264",
-  appId: "1:16814509264:web:5dcad8ec49928d13c362d5"
-};
+    apiKey: "AIzaSyCBuEBsIBE8hhU50epc8CtyeJn_gQLM2rc",
+    authDomain: "grand-war-monitor.firebaseapp.com",
+    databaseURL: "https://grand-war-monitor-default-rtdb.firebaseio.com",
+    projectId: "grand-war-monitor",
+    storageBucket: "grand-war-monitor.firebasestorage.app",
+    messagingSenderId: "16814509264",
+    appId: "1:16814509264:web:5dcad8ec49928d13c362d5"
+  };
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // グローバルに公開
   window.fbDB = db;
   window.fbRef = ref;
   window.fbOnValue = onValue;
@@ -29,7 +27,6 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* 元のスタイルを完全維持 */
   :root {
     --bg: #080b0f; --surface: #0f1318; --surface2: #161c24;
     --border: #252d3a; --border2: #1e2736; --text: #c8d8e8; --muted: #4a5568;
@@ -49,7 +46,7 @@
   h1 { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ctrl-group { display: flex; align-items: center; gap: 5px; }
-  label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  label { font-size: 11px; color: var(--muted); white-space: nowrap; cursor: pointer; }
   select, input[type=number] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; font-size: 12px; font-family: var(--sans); border-radius: 3px; outline: none; }
   select:focus, input[type=number]:focus { border-color: var(--accent); }
   input[type=number] { width: 75px; }
@@ -74,34 +71,13 @@
   #tableContainer { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: 12px; min-width: 820px; background: var(--bg); }
   thead th { background: var(--surface2); box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2); padding: 10px; text-align: left; color: var(--muted); font-size: 11px; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-  
-  /* 拠点列を固定 */
-  thead th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 11;
-    background: var(--surface2);
-  }
-  
+  thead th:first-child { position: sticky; left: 0; z-index: 11; background: var(--surface2); }
   tbody tr { border-bottom: 1px solid var(--border2); }
   tbody tr:hover td { background: var(--surface2); }
   td { padding: 6px 10px; border-bottom: 1px solid var(--border2); border-right: 1px solid var(--border2); white-space: nowrap; }
   td:last-child { border-right: none; }
-  
-  /* 1列目（拠点）を固定 */
-  tbody td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 9;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-  }
-  
-  /* ホバー時の背景色も合わせる */
-  tbody tr:hover td:first-child {
-    background: var(--surface2);
-  }
-  
+  tbody td:first-child { position: sticky; left: 0; z-index: 9; background: var(--surface); border-right: 1px solid var(--border); }
+  tbody tr:hover td:first-child { background: var(--surface2); }
   .cid-cell { display: flex; align-items: center; gap: 8px; }
   .cid { color: var(--accent); font-weight: bold; min-width: 20px; text-align: center; }
   .cname { color: var(--text); font-family: var(--sans); font-size: 11px; }
@@ -132,11 +108,11 @@
   <h1>▶ GRAND WAR MONITOR !!!</h1>
   <div class="controls">
     <div class="ctrl-group">
-      <label>グループID</label>
+      <label for="groupInput">グループID</label>
       <input type="number" id="groupInput" min="1" max="9999" placeholder="例: 165">
     </div>
     <div class="ctrl-group">
-      <label>クラス</label>
+      <label for="classSelect">クラス</label>
       <select id="classSelect">
         <option value="3">Grand Master</option>
         <option value="2">Expert Class</option>
@@ -144,7 +120,7 @@
       </select>
     </div>
     <div class="ctrl-group">
-      <label>ブロック</label>
+      <label for="blockSelect">ブロック</label>
       <select id="blockSelect">
         <option value="0">Block A</option>
         <option value="1">Block B</option>
@@ -195,14 +171,13 @@
     <div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>
   </div>
   
-  <!-- MAPパネル -->
   <div id="mapPanel" style="display: none; margin-top: 20px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 style="font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0;">🗺️ GLOBAL GVG MAP</h3>
       <button id="closeMapBtn" class="sec" style="padding: 3px 10px; font-size: 11px;">✕ 閉じる</button>
     </div>
     <div id="mapContent" style="text-align: center; background: var(--bg); padding: 12px; border-radius: 3px; min-height: 300px; display: flex; align-items: center; justify-content: center;">
-      <img id="mapImage" src="" alt="拠点MAP" style="max-width: 100%; height: auto; max-height: 600px;">
+      <img id="mapImage" src="" alt="拠点MAP" style="max-width: 100%; height: auto; max-height: 600px; display: block; margin: 0 auto;">
     </div>
   </div>
 </div>
@@ -221,20 +196,12 @@ let attackStart = {}, defenseStart = {}, fallenStart = {};
 
 function getGvgDaySuffix() {
   const now = new Date();
-  // 日本時間（Asia/Tokyo）での時刻を取得
   const jstString = now.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Tokyo' });
   const [datePart, timePart] = jstString.split(' ');
   const [year, month, day] = datePart.split('/');
   const [hour] = timePart.split(':');
-  
-  // 日本時間での日付を生成
   const jstDate = new Date(`${year}-${month}-${day}T${timePart}`);
-  
-  // 04:00未満の場合は前日として扱う
-  if (parseInt(hour) < 4) {
-    jstDate.setDate(jstDate.getDate() - 1);
-  }
-  
+  if (parseInt(hour) < 4) jstDate.setDate(jstDate.getDate() - 1);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   let d = days[jstDate.getDay()];
   return (d === "Mon") ? "Sun" : d;
@@ -243,17 +210,13 @@ function getGvgDaySuffix() {
 let currentDay = getGvgDaySuffix();
 let viewDay = getGvgDaySuffix();
 
-// クラウド同期（Firebase）
 function syncFirebase() {
   const gr = document.getElementById('groupInput').value;
   if (!gr || !window.fbDB) return;
-  
   const path = `gvg_logs/G${gr}/${viewDay}`;
   const logRef = window.fbRef(window.fbDB, path);
-  
   window.fbOnValue(logRef, (snapshot) => {
     const data = snapshot.val() || {};
-    // クラウドデータをマージ
     if (data.attack) attackStart = { ...attackStart, ...data.attack };
     if (data.defense) defenseStart = { ...defenseStart, ...data.defense };
     if (data.fallen) fallenStart = { ...fallenStart, ...data.fallen };
@@ -265,18 +228,14 @@ function loadDayData(day) {
   attackStart = JSON.parse(localStorage.getItem(`gw_atk_${day}`) || '{}');
   defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
   fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
-  
-  // 前日の拠点情報を読み込み（前日タブを見た時用）
   prevDayCastles = JSON.parse(localStorage.getItem(`gw_castles_${day}`) || '{}');
-  
-  syncFirebase(); // 読み込み時にFirebaseも確認
+  syncFirebase();
 }
 
 function saveLog() {
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
   localStorage.setItem(`gw_fal_${currentDay}`, JSON.stringify(fallenStart));
-  // 当日の拠点情報をスナップショットとして保存
   localStorage.setItem(`gw_castles_${currentDay}`, JSON.stringify(castles));
 }
 
@@ -293,35 +252,17 @@ function updateDayTabs() {
   });
 }
 
-function checkDailyReset() {
-  const newDay = getGvgDaySuffix();
-  if (newDay !== currentDay) {
-    // 前日のデータを保存してから日付を変更
-    saveLog();
-    currentDay = newDay;
-    viewDay = newDay;
-    loadDayData(currentDay);
-    updateDayTabs();
-    render();
-  }
-}
-
-const getUniqueKey = (cid) => {
-  const gr = document.getElementById('groupInput').value || '0';
-  const cl = document.getElementById('classSelect').value || '0';
-  const bl = document.getElementById('blockSelect').value || '0';
-  // Firebaseのキーとして使えるよう、パス区切り文字などは避ける
-  return `${cid}`; 
-};
-
-loadDayData(viewDay);
-updateDayTabs();
+const getUniqueKey = (cid) => `${cid}`; 
 
 setInterval(() => {
-  // Asia/Tokyoタイムゾーンで日本時間に統一
   const now = new Date();
   document.getElementById('clock').textContent = now.toLocaleTimeString('ja-JP', { hour12: false, timeZone: 'Asia/Tokyo' });
-  checkDailyReset(); 
+  const newDay = getGvgDaySuffix();
+  if (newDay !== currentDay) {
+    saveLog();
+    currentDay = newDay; viewDay = newDay;
+    loadDayData(currentDay); updateDayTabs(); render();
+  }
 }, 1000);
 
 function updateStickyPos() {
@@ -344,7 +285,6 @@ const fmtTime = (ts) => {
   if (ts === 'before') return '<span class="tu">接続前</span>';
   const d = new Date(Number(ts));
   if (isNaN(d.getTime())) return '<span class="tn">−</span>';
-  // Asia/Tokyoタイムゾーンで日本時間に統一
   return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false, timeZone: 'Asia/Tokyo' })}</span>`;
 };
 
@@ -384,32 +324,27 @@ document.getElementById('lookupBtn').addEventListener('click', async()=>{
 
 async function fetchInitial(gr,cl,bl){
   try {
-    const r=await fetch(`${API}/wg/${gr}/globalgvg/${cl}/${bl}/latest`);
+    // API仕様に合わせるための変換
+    const classMap = { "3": "grand", "2": "expert", "1": "elite" };
+    const blockMap = ["a", "b", "c", "d"];
+    const r=await fetch(`${API}/wg/${gr}/globalgvg/${classMap[cl]}/${blockMap[bl]}/latest`);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const j=await r.json();
     if(!j.data) return;
-
     if(j.data.guilds) for(const [id,name] of Object.entries(j.data.guilds)){
       const fi=parseInt(id); guilds[fi]=name; guilds[Math.floor(fi/1000)]=name;
     }
     if(j.data.castles) for(const c of j.data.castles){
-      const cid=c.CastleId;
-      const key = getUniqueKey(cid);
+      const cid=c.CastleId; const key = getUniqueKey(cid);
       castles[cid]={
-        ownerGuildId:Math.floor((c.GuildId||0)/1000),
-        attackerGuildId:Math.floor((c.AttackerGuildId||0)/1000),
-        fallenTs:c.UtcFallenTimeStamp?c.UtcFallenTimeStamp:0,
-        defenseCount:c.DefensePartyCount||0,
-        attackCount:c.AttackPartyCount||0,
-        state:c.GvgCastleState||0
+        ownerGuildId:Math.floor((c.GuildId||0)/1000), attackerGuildId:Math.floor((c.AttackerGuildId||0)/1000),
+        fallenTs:c.UtcFallenTimeStamp?c.UtcFallenTimeStamp:0, defenseCount:c.DefensePartyCount||0,
+        attackCount:c.AttackPartyCount||0, state:c.GvgCastleState||0
       };
-
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
-        if(castles[cid].state===2 && c.UtcFallenTimeStamp && !fallenStart[key]) {
-          fallenStart[key] = c.UtcFallenTimeStamp * 1000;
-        }
+        if(castles[cid].state===2 && c.UtcFallenTimeStamp && !fallenStart[key]) fallenStart[key] = c.UtcFallenTimeStamp * 1000;
         saveLog();
       }
     }
@@ -426,61 +361,49 @@ function connect(){
   if(ws){ ws.close(); ws=null; }
   guilds={}; castles={}; 
   setStat('connecting','接続中...');
-  
-  viewDay = currentDay;
-  loadDayData(currentDay);
-  updateDayTabs();
-  syncFirebase(); // 接続時にFirebase同期開始
-
-  render();
-  fetchInitial(gr,cl,bl);
-  ws=new WebSocket(WS_URL);
-  ws.binaryType='arraybuffer';
+  viewDay = currentDay; loadDayData(currentDay); updateDayTabs();
+  render(); fetchInitial(gr,cl,bl);
+  ws=new WebSocket(WS_URL); ws.binaryType='arraybuffer';
   ws.onopen=()=>{
-    wsConnected=true;
-    setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
+    wsConnected=true; setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
     document.getElementById('connectBtn').textContent='停止';
     document.getElementById('connectBtn').classList.add('connected');
-    const buf=new ArrayBuffer(4);
-    new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
-    ws.send(buf);
+    const buf=new ArrayBuffer(4); new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true); ws.send(buf);
   };
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
-  ws.onclose=(e)=>{
-    wsConnected=false;
-    setStat('','接続');
-    document.getElementById('connectBtn').textContent='接続';
-    document.getElementById('connectBtn').classList.remove('connected');
-  };
+  ws.onclose=()=>{ wsConnected=false; setStat('','接続'); document.getElementById('connectBtn').textContent='接続'; document.getElementById('connectBtn').classList.remove('connected'); };
 }
 
 document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(ws.close(),ws=null):connect());
 
-// MAPボタンのイベントハンドラ
+// --- MAPボタン修正版 ---
 document.getElementById('mapBtn').addEventListener('click', () => {
   const gr = document.getElementById('groupInput').value;
   const cl = document.getElementById('classSelect').value;
   const bl = document.getElementById('blockSelect').value;
+  if(!gr) { err('グループIDを入力してください'); return; }
+
+  const classNames = { "3": "grand", "2": "expert", "1": "elite" };
+  const blockNames = ["a", "b", "c", "d"];
   
-  if(!gr) {
-    err('グループIDを入力してください');
-    return;
-  }
+  // 正しいディレクトリ構造のURLを生成
+  const mapUrl = `${API}/wg/${gr}/globalgvg/${classNames[cl]}/${blockNames[bl]}/map.gif`;
   
-  // 拠点MAPの画像URLを生成
-  const mapUrl = `https://mentemori.icu/gvg/${gr}/${cl}/${bl}/map.gif`;
+  const mapImg = document.getElementById('mapImage');
+  mapImg.onerror = function() {
+    this.style.display = 'none';
+    alert("MAP画像の取得に失敗しました。時間外かデータが未生成です。");
+  };
+  mapImg.onload = function() { this.style.display = 'block'; };
   
-  // パネルを表示
+  mapImg.src = mapUrl;
   document.getElementById('mapPanel').style.display = 'block';
-  document.getElementById('mapImage').src = mapUrl;
   
-  // スクロールしてパネルを表示
   setTimeout(() => {
     document.getElementById('mapPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
 });
 
-// MAP閉じるボタン
 document.getElementById('closeMapBtn').addEventListener('click', () => {
   document.getElementById('mapPanel').style.display = 'none';
 });
@@ -495,8 +418,7 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
       if(castles[i].defenseCount>0) defenseStart[key]='before';
     }
   }
-  saveLog();
-  render();
+  saveLog(); render();
 });
 
 function parseMsg(dv,buf){
@@ -506,48 +428,29 @@ function parseMsg(dv,buf){
     const p=pSid(sid); off+=4;
     if(p.castleId===0){
       if(off+4>dv.byteLength) break;
-      const gid=dv.getUint32(off,true); off+=4;
-      if(!gid) continue;
+      const gid=dv.getUint32(off,true); off+=4; if(!gid) continue;
       const nl=dv.getUint8(off); off+=1;
-      guilds[gid]=new TextDecoder().decode(new Uint8Array(buf,off,nl)); off+=nl;
-      changed=true;
+      guilds[gid]=new TextDecoder().decode(new Uint8Array(buf,off,nl)); off+=nl; changed=true;
     } else {
       if(off+20>dv.byteLength) break;
-      const og=dv.getUint32(off,true); off+=4;
-      const ag=dv.getUint32(off,true); off+=4;
-      const ft=dv.getUint32(off,true); off+=4;
-      const dc=dv.getUint16(off,true); off+=2;
-      const ac=dv.getUint16(off,true); off+=2;
-      const st=dv.getUint8(off); off+=2;
-      const ko=dv.getUint16(off,true); off+=2;
-      const cid=p.castleId;
-      const key = getUniqueKey(cid);
-      
+      const og=dv.getUint32(off,true); const ag=dv.getUint32(off,true);
+      const ft=dv.getUint32(off,true); const dc=dv.getUint16(off,true);
+      const ac=dv.getUint16(off,true); const st=dv.getUint8(off);
+      off+=20; const cid=p.castleId; const key = getUniqueKey(cid);
       const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0, state:0};
-      
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
         if(ac > 0 && (pv.attackCount === 0 || !attackStart[key])) {
-          if(!attackStart[key] || attackStart[key] === 'before') {
-            attackStart[key] = Date.now();
-            logUpdated = true;
-          }
+          if(!attackStart[key] || attackStart[key] === 'before') { attackStart[key] = Date.now(); logUpdated = true; }
         }
         if(dc > 0 && (pv.defenseCount === 0 || !defenseStart[key])) {
-          if(!defenseStart[key] || defenseStart[key] === 'before') {
-            defenseStart[key] = Date.now();
-            logUpdated = true;
-          }
+          if(!defenseStart[key] || defenseStart[key] === 'before') { defenseStart[key] = Date.now(); logUpdated = true; }
         }
         if(st === 2 && (pv.state !== 2 || !fallenStart[key])) {
-          if(!fallenStart[key]) {
-            fallenStart[key] = ft > 0 ? ft * 1000 : Date.now();
-            logUpdated = true;
-          }
+          if(!fallenStart[key]) { fallenStart[key] = ft > 0 ? ft * 1000 : Date.now(); logUpdated = true; }
         }
         if(logUpdated) saveLog();
       }
-
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st};
       changed=true;
     }
@@ -562,57 +465,29 @@ function render(){
   const cids = Array.from({length:21},(_,i)=>i+1);
   const summary = {};
   
-  let h=`<table><thead><tr>
-    <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
-    <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
-    <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th>
-  </tr></thead><tbody>`;
-
+  let h=`<table><thead><tr><th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th><th class="cnt">攻撃P</th><th class="cnt">防衛P</th><th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th></tr></thead><tbody>`;
   for(const cid of cids){
-    // 当日の場合は currentCastles、前日の場合は prevDayCastles から取得
     const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0}) : (prevDayCastles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0});
-    const cname = CNAMES[cid] || '???';
-    const key = getUniqueKey(cid);
-    
+    const cname = CNAMES[cid] || '???'; const key = getUniqueKey(cid);
     if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
-
     const dispFal = fallenStart[key] || 0;
-
-    h+=`<tr>
-      <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
-      <td class="guild">${c.ownerGuildId ? gName(c.ownerGuildId) : '<span class="tn">−</span>'}</td>
-      <td class="guild atk-g">${c.attackerGuildId ? gName(c.attackerGuildId) : '<span class="tn">−</span>'}</td>
-      <td>${c.state ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td>
-      <td class="cnt ${c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td>
-      <td class="cnt ${c.defenseCount>0?'cd':'cz'}">${c.defenseCount || '−'}</td>
-      <td>${isToday ? fmtTime(attackStart[key]) : '<span class="tn">−</span>'}</td>
-      <td>${isToday ? fmtTime(defenseStart[key]) : '<span class="tn">−</span>'}</td>
-      <td class="${dispFal && isToday ? 'tf' : 'tn'}">${isToday ? fmtTime(dispFal) : '<span class="tn">−</span>'}</td>
-    </tr>`;
+    h+=`<tr><td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td><td class="guild">${c.ownerGuildId ? gName(c.ownerGuildId) : '<span class="tn">−</span>'}</td><td class="guild atk-g">${c.attackerGuildId ? gName(c.attackerGuildId) : '<span class="tn">−</span>'}</td><td>${c.state ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td><td class="cnt ${c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td><td class="cnt ${c.defenseCount>0?'cd':'cz'}">${c.defenseCount || '−'}</td><td>${isToday ? fmtTime(attackStart[key]) : '<span class="tn">−</span>'}</td><td>${isToday ? fmtTime(defenseStart[key]) : '<span class="tn">−</span>'}</td><td class="${dispFal && isToday ? 'tf' : 'tn'}">${isToday ? fmtTime(dispFal) : '<span class="tn">−</span>'}</td></tr>`;
   }
-  
   if (isToday) {
-    let sh = `<div class="summary-section">
-      <div class="summary-title">▶ TOTAL ACTIVE PARTIES (配置済みパーティ数)</div>
-      <div class="summary-grid">`;
+    let sh = `<div class="summary-section"><div class="summary-title">▶ TOTAL ACTIVE PARTIES</div><div class="summary-grid">`;
     const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
     for(const gid of sortedGuilds) {
       if(summary[gid] === 0) continue; 
-      sh += `<div class="summary-card">
-        <div class="summary-gname">${gName(gid)}</div>
-        <div class="summary-count">${summary[gid]}<span>P</span></div>
-      </div>`;
+      sh += `<div class="summary-card"><div class="summary-gname">${gName(gid)}</div><div class="summary-count">${summary[gid]}<span>P</span></div></div>`;
     }
-    sh += `</div></div>`;
-    st.innerHTML = sh;
-  } else {
-    st.innerHTML = '';
-  }
-
+    st.innerHTML = sh + `</div></div>`;
+  } else { st.innerHTML = ''; }
   ct.innerHTML = h + '</tbody></table>';
 }
 
+loadDayData(viewDay);
+updateDayTabs();
 render();
 </script>
 </body>
