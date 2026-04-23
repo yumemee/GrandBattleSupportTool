@@ -204,14 +204,27 @@ const CNAMES = {1:'アイン',2:'イエソド',3:'マルクト',4:'ケテル',5:
 const GROUP_WORLDS = { 140: "W149, W150, W151, W152", 141: "W1, W7, W12, W19", 142: "W2, W8, W20, W27", 143: "W3, W4, W13, W31", 144: "W5, W9, W21, W30", 145: "W6, W14, W15, W32", 146: "W10, W18, W24, W29", 147: "W11, W17, W22, W26", 148: "W16, W23, W25, W28", 149: "W33, W54, W60, W63", 150: "W34, W43, W51, W61", 151: "W35, W44, W48, W53", 152: "W36, W38, W47, W64", 153: "W37, W46, TI57, W58", 154: "W39, W52, W56, W62", 155: "W40, W41, W42, W55", 156: "W45, W49, W50, W59", 157: "W65, W67, W78, W96", 158: "W66, W69, W76, W85", 159: "W68, W70, W84, W93", 160: "W71, W75, W82, W89", 161: "W72, W79, W86, W91", 162: "W73, W83, W90, W95", 163: "W74, W80, W87, W94", 164: "W77, W81, W88, W92", 165: "W97, W104, W110, W115", 166: "W98, W103, W108, W113", 167: "W99, W102, W109, W116", 168: "W100, W105, W107, W114", 169: "W101, W106, W111, W112", 170: "W117, W127, W129, W132", 171: "W118, W124, W126, W131", 172: "W119, W121, W122, W125", 173: "W120, W123, W128, W130", 174: "W133, W139, W143, W148", 175: "W134, W137, W142, W145", 176: "W135, W138, W144, W147", 177: "W136, W140, W141, W146", 178: "W153, W154, W155, W156", 179: "W157, W158, W159, W160" };
 
 let ws=null, wsConnected=false;
-let guilds={}, castles={};
+let guilds={}, castles={}, prevDayCastles={};
 let attackStart = {}, defenseStart = {}, fallenStart = {};
 
 function getGvgDaySuffix() {
   const now = new Date();
-  if (now.getHours() < 4) now.setDate(now.getDate() - 1);
+  // 日本時間（Asia/Tokyo）での時刻を取得
+  const jstString = now.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Tokyo' });
+  const [datePart, timePart] = jstString.split(' ');
+  const [year, month, day] = datePart.split('/');
+  const [hour] = timePart.split(':');
+  
+  // 日本時間での日付を生成
+  const jstDate = new Date(`${year}-${month}-${day}T${timePart}`);
+  
+  // 04:00未満の場合は前日として扱う
+  if (parseInt(hour) < 4) {
+    jstDate.setDate(jstDate.getDate() - 1);
+  }
+  
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  let d = days[now.getDay()];
+  let d = days[jstDate.getDay()];
   return (d === "Mon") ? "Sun" : d;
 }
 
@@ -240,6 +253,10 @@ function loadDayData(day) {
   attackStart = JSON.parse(localStorage.getItem(`gw_atk_${day}`) || '{}');
   defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
   fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
+  
+  // 前日の拠点情報を読み込み（前日タブを見た時用）
+  prevDayCastles = JSON.parse(localStorage.getItem(`gw_castles_${day}`) || '{}');
+  
   syncFirebase(); // 読み込み時にFirebaseも確認
 }
 
@@ -247,6 +264,8 @@ function saveLog() {
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
   localStorage.setItem(`gw_fal_${currentDay}`, JSON.stringify(fallenStart));
+  // 当日の拠点情報をスナップショットとして保存
+  localStorage.setItem(`gw_castles_${currentDay}`, JSON.stringify(castles));
 }
 
 function updateDayTabs() {
@@ -509,7 +528,8 @@ function render(){
   </tr></thead><tbody>`;
 
   for(const cid of cids){
-    const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0}) : {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0};
+    // 当日の場合は currentCastles、前日の場合は prevDayCastles から取得
+    const c = isToday ? (castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0}) : (prevDayCastles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0});
     const cname = CNAMES[cid] || '???';
     const key = getUniqueKey(cid);
     
@@ -520,14 +540,14 @@ function render(){
 
     h+=`<tr>
       <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
-      <td class="guild">${isToday ? gName(c.ownerGuildId) : '<span class="tn">−</span>'}</td>
-      <td class="guild atk-g">${isToday && c.attackerGuildId ? gName(c.attackerGuildId) : '<span class="tn">−</span>'}</td>
-      <td>${isToday ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td>
-      <td class="cnt ${isToday && c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td>
-      <td class="cnt ${isToday && c.defenseCount>0?'cd':'cz'}">${isToday ? c.defenseCount : '−'}</td>
-      <td>${fmtTime(attackStart[key])}</td>
-      <td>${fmtTime(defenseStart[key])}</td>
-      <td class="${dispFal ? 'tf' : 'tn'}">${fmtTime(dispFal)}</td>
+      <td class="guild">${c.ownerGuildId ? gName(c.ownerGuildId) : '<span class="tn">−</span>'}</td>
+      <td class="guild atk-g">${c.attackerGuildId ? gName(c.attackerGuildId) : '<span class="tn">−</span>'}</td>
+      <td>${c.state ? `<span class="badge s${c.state}">${SL[c.state]||c.state}</span>` : '<span class="tn">−</span>'}</td>
+      <td class="cnt ${c.attackCount>0?'ca':'cz'}">${isToday ? c.attackCount : '−'}</td>
+      <td class="cnt ${c.defenseCount>0?'cd':'cz'}">${c.defenseCount || '−'}</td>
+      <td>${isToday ? fmtTime(attackStart[key]) : '<span class="tn">−</span>'}</td>
+      <td>${isToday ? fmtTime(defenseStart[key]) : '<span class="tn">−</span>'}</td>
+      <td class="${dispFal && isToday ? 'tf' : 'tn'}">${isToday ? fmtTime(dispFal) : '<span class="tn">−</span>'}</td>
     </tr>`;
   }
   
