@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grand War 拠点モニター</title>
+<title>Grand War 拠点モニター (マルチグループ対応)</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -15,210 +15,65 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; min-height: 100vh; }
-
-  /* --- 固定ヘッダーセクション --- */
-  header { 
-    background: var(--surface); 
-    border-bottom: 1px solid var(--border); 
-    padding: 10px 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  
-  .status-bar {
-    background: var(--surface); 
-    border-bottom: 1px solid var(--border2);
-    padding: 5px 16px; 
-    display: flex; 
-    align-items: center; 
-    gap: 14px;
-    font-family: var(--mono); 
-    font-size: 11px; 
-    color: var(--muted);
-    position: sticky;
-    top: 103px;
-    z-index: 99;
-  }
-  @media (max-width: 630px) {
-    .status-bar { top: 138px; }
-  }
-
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; position: sticky; top: 0; z-index: 100; }
+  .status-bar { background: var(--surface); border-bottom: 1px solid var(--border2); padding: 5px 16px; display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); position: sticky; top: 103px; z-index: 99; }
+  @media (max-width: 630px) { .status-bar { top: 138px; } }
   h1 { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ctrl-group { display: flex; align-items: center; gap: 5px; }
   label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-  select, input[type=number] {
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 8px; font-size: 12px;
-    font-family: var(--sans); border-radius: 3px; outline: none;
-  }
-  select:focus, input[type=number]:focus { border-color: var(--accent); }
+  select, input[type=number] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; font-size: 12px; font-family: var(--sans); border-radius: 3px; outline: none; }
   input[type=number] { width: 75px; }
-  button {
-    background: var(--accent); border: 1px solid var(--accent);
-    color: #fff; padding: 5px 14px; font-size: 12px;
-    font-family: var(--sans); border-radius: 3px; cursor: pointer; font-weight: bold;
-  }
-  button:hover { opacity: 0.85; }
+  button { background: var(--accent); border: 1px solid var(--accent); color: #fff; padding: 5px 14px; font-size: 12px; font-family: var(--sans); border-radius: 3px; cursor: pointer; font-weight: bold; }
   button.connected { background: var(--attack); border-color: var(--attack); }
   button.sec { background: transparent; border-color: var(--muted); color: var(--muted); font-weight: normal; }
-  button.sec:hover { border-color: var(--text); color: var(--text); }
-  .group-hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
-  .group-hint a { color: var(--accent); text-decoration: none; }
-
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
   .dot.connected { background: var(--defense); animation: pulse 2s infinite; }
-  .dot.error { background: var(--attack); }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
   #clock { margin-left: auto; font-size: 12px; color: var(--text); }
-
   .main { padding: 12px 16px; }
   .api-error { background: #2a0a0a; border: 1px solid #5a2020; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #f87171; margin-bottom: 10px; display: none; white-space: pre-wrap; }
   .info-note { background: #0d1a2a; border: 1px solid #1a3a5a; border-radius: 4px; padding: 7px 12px; font-size: 11px; color: #6a9fd8; margin-bottom: 10px; }
   .legend { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
-  .legend-item { display: flex; align-items: center; gap: 4px; }
-  .lc { width: 9px; height: 9px; border-radius: 2px; }
-  
-  /* --- テーブルコンテナ --- */
-  #tableContainer { 
-    width: 100%;
-    overflow-x: auto; 
-    -webkit-overflow-scrolling: touch; 
-  }
-  
-  table { 
-    width: 100%; 
-    border-collapse: separate;
-    border-spacing: 0;
-    font-family: var(--mono); 
-    font-size: 12px; 
-    min-width: 920px;
-  }
-
-  thead th { 
-    background: var(--surface2); 
-    box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2);
-    padding: 10px; 
-    text-align: left; 
-    color: var(--muted); 
-    font-size: 11px; 
-    white-space: nowrap; 
-    position: sticky; 
-    top: 0; 
-    z-index: 10; 
-  }
-
-  tbody tr { border-bottom: 1px solid var(--border2); }
-  tbody tr:hover { background: var(--surface2); }
-  td { 
-    padding: 6px 10px; 
-    border-bottom: 1px solid var(--border2);
-    border-right: 1px solid var(--border2); 
-    white-space: nowrap; 
-  }
-  td:last-child { border-right: none; }
-
-  .cid-cell { display: flex; align-items: center; gap: 8px; }
-  .cid { color: var(--accent); font-weight: bold; min-width: 20px; text-align: center; }
-  .cname { color: var(--text); font-family: var(--sans); font-size: 11px; }
-  .guild { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .lc { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  #tableContainer { width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: 12px; min-width: 920px; }
+  thead th { background: var(--surface2); box-shadow: inset 0 -1px 0 var(--border), inset -1px 0 0 var(--border2); padding: 10px; text-align: left; color: var(--muted); font-size: 11px; position: sticky; top: 0; z-index: 10; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border2); border-right: 1px solid var(--border2); white-space: nowrap; }
+  .cid { color: var(--accent); font-weight: bold; }
   .atk-g { color: var(--attack); }
   .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
   .s0{background:#1a2030;color:var(--muted)} .s1{background:#3d2e00;color:var(--battle)}
-  .s2{background:#3d1000;color:var(--fallen)} .s3{background:#3d1800;color:#f97316} .s4{background:#0d3020;color:var(--defense)}
+  .s2{background:#3d1000;color:var(--fallen)} .s4{background:#0d3020;color:var(--defense)}
   .cnt { text-align: center; }
   .ca{color:var(--attack)} .cd{color:var(--defense)} .cz{color:var(--muted)}
   .tc{color:var(--text)} .tu{color:var(--muted);font-size:11px} .tn{color:var(--border)} .tf{color:var(--fallen)}
   .no-data { text-align: center; padding: 50px 20px; color: var(--muted); font-family: var(--mono); }
-  .no-data span { display: block; font-size: 28px; margin-bottom: 10px; opacity: .25; }
-  
-  #lookupResult { display: none; margin-bottom: 10px; }
-  #lookupResult .title { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
-  #groupList { display: flex; gap: 6px; flex-wrap: wrap; }
-
-  /* --- 集計セクション用スタイル --- */
-  .summary-section {
-    margin-bottom: 24px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 16px;
-  }
-  .summary-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-  }
-  .summary-card {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    padding: 10px 12px;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .summary-gname {
-    font-size: 12px;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-right: 8px;
-  }
-  .summary-count {
-    font-family: var(--mono);
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--accent);
-  }
-  .summary-count span {
-    font-size: 10px;
-    margin-left: 4px;
-    color: var(--muted);
-  }
+  .summary-section { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .summary-card { background: var(--surface); border: 1px solid var(--border2); padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; }
 </style>
 </head>
 <body>
 <header id="header">
-  <h1>▶ GRAND WAR MONITOR !!!</h1>
+  <h1>▶ GRAND WAR MONITOR (MULTI-LOG)</h1>
   <div class="controls">
-    <div class="ctrl-group">
-      <label>グループID</label>
-      <input type="number" id="groupInput" min="1" max="9999" placeholder="例: 165">
-    </div>
+    <div class="ctrl-group"><label>グループID</label><input type="number" id="groupInput" min="1" max="9999" placeholder="例: 165"></div>
     <div class="ctrl-group">
       <label>クラス</label>
       <select id="classSelect">
-        <option value="3">Grand Master</option>
-        <option value="2">Expert Class</option>
-        <option value="1">Elite Class</option>
+        <option value="3">Grand Master</option><option value="2">Expert Class</option><option value="1">Elite Class</option>
       </select>
     </div>
     <div class="ctrl-group">
       <label>ブロック</label>
       <select id="blockSelect">
-        <option value="0">Block A</option>
-        <option value="1">Block B</option>
-        <option value="2">Block C</option>
-        <option value="3">Block D</option>
+        <option value="0">Block A</option><option value="1">Block B</option><option value="2">Block C</option><option value="3">Block D</option>
       </select>
     </div>
     <button id="connectBtn">接続</button>
-    <button id="resetBtn" class="sec">リセット</button>
+    <button id="resetBtn" class="sec">現在のグループをリセット</button>
     <button id="lookupBtn" class="sec">検索</button>
-  </div>
-  <div class="group-hint">
-    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「検索」で確認。
   </div>
 </header>
 
@@ -230,78 +85,42 @@
 
 <div class="main">
   <div class="api-error" id="apiError"></div>
-
-  <div id="lookupResult">
-    <div class="title">グループ一覧:</div>
-    <div id="groupList"></div>
+  <div id="lookupResult" style="display:none; margin-bottom:10px;">
+    <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">グループ一覧:</div>
+    <div id="groupList" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
   </div>
-
-  <div class="info-note">
-    ℹ️ パーティ数が 0→1 になった瞬間を記録。ブラウザを閉じてもリセットするまで保持。「リセット」を押した場合のみ時刻の記録はリセットされる。
-  </div>
-  
-  <div class="legend">
-    <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
-    <span class="legend-item"><span class="lc" style="background:var(--defense)"></span>防衛</span>
-    <span class="legend-item"><span class="lc" style="background:var(--battle)"></span>宣戦</span>
-    <span class="legend-item"><span class="lc" style="background:var(--fallen)"></span>陥落</span>
-  </div>
-
+  <div class="info-note">ℹ️ ログはグループ・ブロックごとに個別に保存されます。</div>
   <div id="summaryContainer"></div>
-  
-  <div id="tableContainer">
-    <div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>
-  </div>
+  <div id="tableContainer"><div class="no-data"><span>🏰</span>接続してください</div></div>
 </div>
 
 <script>
 const API = 'https://api.mentemori.icu';
 const WS_URL = 'wss://api.mentemori.icu/gvg';
 const SL = {0:'−',1:'宣戦中',2:'陥落',3:'反撃',4:'反撃成功'};
-const CNAMES = {
-  1:'アイン', 2:'イエソド', 3:'マルクト', 4:'ケテル', 5:'テファレト',
-  6:'クシュル', 7:'シトリ', 8:'トパズ', 9:'メラル', 10:'ペリド',
-  11:'ファリア', 12:'ラピス', 13:'ラリマル', 14:'マリン', 15:'アメト',
-  16:'ラペン', 17:'ジルコン', 18:'オニキス', 19:'フロライト', 20:'ガネット', 21:'ルラ'
-};
-
-const GROUP_WORLDS = {
-  140: "W149, W150, W151, W152", 141: "W1, W7, W12, W19", 142: "W2, W8, W20, W27",
-  143: "W3, W4, W13, W31", 144: "W5, W9, W21, W30", 145: "W6, W14, W15, W32",
-  146: "W10, W18, W24, W29", 147: "W11, W17, W22, W26", 148: "W16, W23, W25, W28",
-  149: "W33, W54, W60, W63", 150: "W34, W43, W51, W61", 151: "W35, W44, W48, W53",
-  152: "W36, W38, W47, W64", 153: "W37, W46, W57, W58", 154: "W39, W52, W56, W62",
-  155: "W40, W41, W42, W55", 156: "W45, W49, W50, W59", 157: "W65, W67, W78, W96",
-  158: "W66, W69, W76, W85", 159: "W68, W70, W84, W93", 160: "W71, W75, W82, W89",
-  161: "W72, W79, W86, W91", 162: "W73, W83, W90, W95", 163: "W74, W80, W87, W94",
-  164: "W77, W81, W88, W92", 165: "W97, W104, W110, W115", 166: "W98, W103, W108, W113",
-  167: "W99, W102, W109, W116", 168: "W100, W105, W107, W114", 169: "W101, W106, W111, W112",
-  170: "W117, W127, W129, W132", 171: "W118, W124, W126, W131", 172: "W119, W121, W122, W125",
-  173: "W120, W123, W128, W130", 174: "W133, W139, W143, W148", 175: "W134, W137, W142, W145",
-  176: "W135, W138, W144, W147", 177: "W136, W140, W141, W146", 178: "W153, W154, W155, W156",
-  179: "W157, W158, W159, W160"
-};
+const CNAMES = {1:'アイン', 2:'イエソド', 3:'マルクト', 4:'ケテル', 5:'テファレト', 6:'クシュル', 7:'シトリ', 8:'トパズ', 9:'メラル', 10:'ペリド', 11:'ファリア', 12:'ラピス', 13:'ラリマル', 14:'マリン', 15:'アメト', 16:'ラペン', 17:'ジルコン', 18:'オニキス', 19:'フロライト', 20:'ガネット', 21:'ルラ'};
 
 let ws=null, wsConnected=false;
 let guilds={}, castles={};
 
-// --- 永続化ストレージの初期化 ---
-let attackStart = JSON.parse(localStorage.getItem('gw_attackStart') || '{}');
-let defenseStart = JSON.parse(localStorage.getItem('gw_defenseStart') || '{}');
+// --- 永続化ストレージ (一括管理) ---
+let attackLog = JSON.parse(localStorage.getItem('gw_atk_logs') || '{}');
+let defenseLog = JSON.parse(localStorage.getItem('gw_def_logs') || '{}');
+
+// 現在のグループ設定に基づいたユニークキーを生成
+const getLogKey = (cid) => {
+  const gr = document.getElementById('groupInput').value;
+  const cl = document.getElementById('classSelect').value;
+  const bl = document.getElementById('blockSelect').value;
+  return `G${gr}_C${cl}_B${bl}_${cid}`;
+};
 
 const saveLog = () => {
-  localStorage.setItem('gw_attackStart', JSON.stringify(attackStart));
-  localStorage.setItem('gw_defenseStart', JSON.stringify(defenseStart));
+  localStorage.setItem('gw_atk_logs', JSON.stringify(attackLog));
+  localStorage.setItem('gw_def_logs', JSON.stringify(defenseLog));
 };
 
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false}); }, 1000);
-
-function updateStickyPos() {
-  const h = document.getElementById('header').offsetHeight;
-  document.getElementById('statusBar').style.top = h + 'px';
-}
-window.addEventListener('resize', updateStickyPos);
-updateStickyPos();
 
 const mkSid=(cid,bl,gr,cl,wd)=>(cid&31)|((bl&7)<<5)|((gr&255)<<8)|((cl&7)<<16)|((wd&0x1FFF)<<19);
 const pSid=v=>({castleId:v&31,block:(v>>>5)&7,group:(v>>>8)&255,gvgClass:(v>>>16)&7,worldId:(v>>>19)&0x1FFF});
@@ -310,67 +129,44 @@ const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 const fmtSec=(s)=>s?new Date(s*1000).toLocaleTimeString('ja-JP',{hour12:false}):'−';
-const fmtStart=(v)=>v===undefined||v===null||v==='−'?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
+const fmtStart=(val)=>!val?'<span class="tn">−</span>':val==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(val).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
+
 const setStat=(t,tx)=>{ 
   document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
   document.getElementById('statusText').textContent=tx;
-  updateStickyPos();
 };
 
 document.getElementById('lookupBtn').addEventListener('click', async()=>{
-  const btn=document.getElementById('lookupBtn');
-  btn.disabled=true; btn.textContent='...'; hideErr();
   try {
     const r=await fetch(`${API}/wgroups`);
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const j=await r.json();
     const gs=(j.data||[]).filter(g=>g.globalgvg);
-    const res=document.getElementById('lookupResult');
     const list=document.getElementById('groupList');
     list.innerHTML='';
-    if(!gs.length){ list.innerHTML='<span style="color:var(--muted)">データなし</span>'; }
-    else gs.forEach(g=>{
+    gs.forEach(g=>{
       const b=document.createElement('button');
-      b.className='sec'; 
-      const gId = g.group_id;
-      const wInfo = GROUP_WORLDS[gId] ? ` (${GROUP_WORLDS[gId]})` : "";
-      b.style.cssText='font-size:11px;padding:6px 12px;font-family:var(--mono);text-align:left;white-space:nowrap;';
-      b.textContent=`G${gId}${wInfo}`;
-      b.onclick=()=>{ document.getElementById('groupInput').value=gId; res.style.display='none'; updateStickyPos(); };
+      b.className='sec'; b.textContent=`G${g.group_id}`;
+      b.onclick=()=>{ document.getElementById('groupInput').value=g.group_id; document.getElementById('lookupResult').style.display='none'; };
       list.appendChild(b);
     });
-    res.style.display='block';
-    updateStickyPos();
+    document.getElementById('lookupResult').style.display='block';
   } catch(e){ err('取得失敗'); }
-  finally{ btn.disabled=false; btn.textContent='検索'; }
 });
 
 async function fetchInitial(gr,cl,bl){
   try {
     const r=await fetch(`${API}/wg/${gr}/globalgvg/${cl}/${bl}/latest`);
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const j=await r.json();
     if(!j.data) return;
-    const mn=j.data.matching_number;
-    document.getElementById('matchInfo').textContent=mn?`Match#${mn}`:'';
-    if(j.data.guilds) for(const [id,name] of Object.entries(j.data.guilds)){
-      const fi=parseInt(id); guilds[fi]=name; guilds[Math.floor(fi/1000)]=name;
-    }
+    if(j.data.guilds) for(const [id,name] of Object.entries(j.data.guilds)){ guilds[id]=name; guilds[Math.floor(id/1000)]=name; }
     if(j.data.castles) for(const c of j.data.castles){
       const cid=c.CastleId;
-      castles[cid]={
-        ownerGuildId:Math.floor((c.GuildId||0)/1000),
-        attackerGuildId:Math.floor((c.AttackerGuildId||0)/1000),
-        fallenTs:c.UtcFallenTimeStamp?Math.floor(c.UtcFallenTimeStamp/1000):0,
-        defenseCount:c.DefensePartyCount||0,
-        attackCount:c.AttackPartyCount||0,
-        state:c.GvgCastleState||0, koCount:0
-      };
-      if(castles[cid].attackCount>0 && !attackStart[cid]) attackStart[cid]='before';
-      if(castles[cid].defenseCount>0 && !defenseStart[cid]) defenseStart[cid]='before';
+      const key = getLogKey(cid);
+      castles[cid]={ ownerGuildId:Math.floor((c.GuildId||0)/1000), attackerGuildId:Math.floor((c.AttackerGuildId||0)/1000), fallenTs:c.UtcFallenTimeStamp?Math.floor(c.UtcFallenTimeStamp/1000):0, defenseCount:c.DefensePartyCount||0, attackCount:c.AttackPartyCount||0, state:c.GvgCastleState||0, koCount:0 };
+      if(castles[cid].attackCount>0 && !attackLog[key]) attackLog[key]='before';
+      if(castles[cid].defenseCount>0 && !defenseLog[key]) defenseLog[key]='before';
     }
-    saveLog();
-    render();
+    saveLog(); render();
   } catch(e){ err('初期データ取得失敗'); }
 }
 
@@ -378,159 +174,99 @@ function connect(){
   const gr=parseInt(document.getElementById('groupInput').value);
   const cl=parseInt(document.getElementById('classSelect').value);
   const bl=parseInt(document.getElementById('blockSelect').value);
-  if(!gr||isNaN(gr)){ err('グループIDを入力'); return; }
-  hideErr();
-  if(ws){ ws.close(); ws=null; }
-  guilds={}; castles={}; 
-  document.getElementById('matchInfo').textContent='';
-  setStat('connecting','接続中...');
-  render();
-  fetchInitial(gr,cl,bl);
-  ws=new WebSocket(WS_URL);
-  ws.binaryType='arraybuffer';
+  if(!gr){ err('グループIDを入力'); return; }
+  hideErr(); if(ws) ws.close();
+  guilds={}; castles={}; render(); fetchInitial(gr,cl,bl);
+  ws=new WebSocket(WS_URL); ws.binaryType='arraybuffer';
   ws.onopen=()=>{
-    wsConnected=true;
-    setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
+    wsConnected=true; setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
     document.getElementById('connectBtn').textContent='切断';
-    document.getElementById('connectBtn').classList.add('connected');
-    const buf=new ArrayBuffer(4);
-    new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
-    ws.send(buf);
+    const buf=new ArrayBuffer(4); new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true); ws.send(buf);
   };
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
-  ws.onclose=(e)=>{
-    wsConnected=false;
-    setStat('','切断');
-    document.getElementById('connectBtn').textContent='接続';
-    document.getElementById('connectBtn').classList.remove('connected');
-  };
+  ws.onclose=()=>{ wsConnected=false; setStat('','切断'); document.getElementById('connectBtn').textContent='接続'; };
 }
 
-document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(ws.close(),ws=null):connect());
+document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?ws.close():connect());
 
 document.getElementById('resetBtn').addEventListener('click',()=>{
-  if(!confirm('全ての開始ログを消去してリセットしますか？')) return;
-  attackStart={}; defenseStart={};
-  localStorage.removeItem('gw_attackStart');
-  localStorage.removeItem('gw_defenseStart');
-  for(const[k,c] of Object.entries(castles)){
-    const cid=parseInt(k);
-    if(c.attackCount>0) attackStart[cid]='before';
-    if(c.defenseCount>0) defenseStart[cid]='before';
+  if(!confirm('現在のグループ・ブロックのログをリセットしますか？')) return;
+  for(let i=1; i<=21; i++){
+    const key = getLogKey(i);
+    delete attackLog[key]; delete defenseLog[key];
+    if(castles[i]){
+      if(castles[i].attackCount>0) attackLog[key]='before';
+      if(castles[i].defenseCount>0) defenseLog[key]='before';
+    }
   }
-  saveLog();
-  render();
+  saveLog(); render();
 });
 
 function parseMsg(dv,buf){
   let off=0,changed=false;
   while(off+4<=dv.byteLength){
-    const sid=dv.getUint32(off,true);
-    const p=pSid(sid); off+=4;
+    const sid=dv.getUint32(off,true); const p=pSid(sid); off+=4;
     if(p.castleId===0){
-      if(off+4>dv.byteLength) break;
       const gid=dv.getUint32(off,true); off+=4;
-      if(!gid) continue;
       const nl=dv.getUint8(off); off+=1;
       guilds[gid]=new TextDecoder().decode(new Uint8Array(buf,off,nl)); off+=nl;
       changed=true;
     } else {
-      if(off+20>dv.byteLength) break;
-      const og=dv.getUint32(off,true); off+=4;
-      const ag=dv.getUint32(off,true); off+=4;
+      const og=dv.getUint32(off,true); const ag=dv.getUint32(off,true); off+=8;
       const ft=dv.getUint32(off,true); off+=4;
-      const dc=dv.getUint16(off,true); off+=2;
-      const ac=dv.getUint16(off,true); off+=2;
+      const dc=dv.getUint16(off,true); const ac=dv.getUint16(off,true); off+=4;
       const st=dv.getUint8(off); off+=2;
       const ko=dv.getUint16(off,true); off+=2;
-      const cid=p.castleId;
-      
+      const cid=p.castleId; const key=getLogKey(cid);
       const pv=castles[cid]||{attackCount:0, defenseCount:0};
       
-      let logUpdated = false;
-      // 攻撃P 0->1 変化判定
       if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
-        if(!attackStart[cid] || attackStart[cid] === 'before') {
-          attackStart[cid] = Date.now();
-          logUpdated = true;
-        }
+        if(!attackLog[key]) attackLog[key] = Date.now();
       }
-      // 防衛P 0->1 変化判定
       if(dc > 0 && (pv.defenseCount === 0 || pv.defenseCount === undefined)) {
-        if(!defenseStart[cid] || defenseStart[cid] === 'before') {
-          defenseStart[cid] = Date.now();
-          logUpdated = true;
-        }
+        if(!defenseLog[key]) defenseLog[key] = Date.now();
       }
-      
-      if(logUpdated) saveLog();
-
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st,koCount:ko};
       changed=true;
     }
   }
-  if(changed) render();
+  if(changed) { saveLog(); render(); }
 }
 
 function render(){
   const ct=document.getElementById('tableContainer');
   const st = document.getElementById('summaryContainer');
   const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
-  
-  if(!cids.length && Object.keys(castles).length === 0){ 
-    ct.innerHTML='<div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>'; 
-    st.innerHTML='';
-    return; 
-  }
+  if(!cids.length){ ct.innerHTML='<div class="no-data"><span>🏰</span>データ待機中...</div>'; st.innerHTML=''; return; }
 
   const summary = {};
-  let h=`<table><thead><tr>
-    <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
-    <th class="cnt">攻撃P</th><th class="cnt">防衛P</th>
-    <th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th><th class="cnt">KO</th>
-  </tr></thead><tbody>`;
+  let h=`<table><thead><tr><th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th><th class="cnt">攻撃P</th><th class="cnt">防衛P</th><th>🗡攻撃開始</th><th>🛡防衛開始</th><th>陥落</th><th class="cnt">KO</th></tr></thead><tbody>`;
 
   for(const cid of cids){
-    const c=castles[cid];
-    const cname = CNAMES[cid] || '???';
-
+    const c=castles[cid]; const key = getLogKey(cid);
     if(c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
     h+=`<tr>
-      <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
+      <td><div class="cid-cell"><span class="cid">${cid}</span> <span>${CNAMES[cid]}</span></div></td>
       <td class="guild">${gName(c.ownerGuildId)}</td>
-      <td class="guild atk-g">${c.attackerGuildId?gName(c.attackerGuildId):'<span class="tn">−</span>'}</td>
+      <td class="guild atk-g">${c.attackerGuildId?gName(c.attackerGuildId):'−'}</td>
       <td><span class="badge s${c.state}">${SL[c.state]||c.state}</span></td>
       <td class="cnt ${c.attackCount>0?'ca':'cz'}">${c.attackCount}</td>
       <td class="cnt ${c.defenseCount>0?'cd':'cz'}">${c.defenseCount}</td>
-      <td>${fmtStart(attackStart[cid])}</td>
-      <td>${fmtStart(defenseStart[cid])}</td>
+      <td>${fmtStart(attackLog[key])}</td>
+      <td>${fmtStart(defenseLog[key])}</td>
       <td class="${c.fallenTs?'tf':'tn'}">${fmtSec(c.fallenTs)}</td>
       <td class="cnt cz">${c.koCount||0}</td>
     </tr>`;
   }
   
-  let sh = `<div class="summary-section">
-    <div class="summary-title">▶ TOTAL ACTIVE PARTIES (配置済みパーティ数)</div>
-    <div class="summary-grid">`;
-  const sortedGuilds = Object.keys(summary).sort((a,b) => gName(a).localeCompare(gName(b)));
-  for(const gid of sortedGuilds) {
-    if(summary[gid] === 0) continue; 
-    sh += `<div class="summary-card">
-      <div class="summary-gname">${gName(gid)}</div>
-      <div class="summary-count">${summary[gid]}<span>P</span></div>
-    </div>`;
-  }
-  sh += `</div></div>`;
-
-  st.innerHTML = sh;
+  let sh = `<div class="summary-section"><div class="summary-grid">`;
+  Object.keys(summary).sort((a,b)=>gName(a).localeCompare(gName(b))).forEach(gid=>{
+    if(summary[gid]>0) sh += `<div class="summary-card"><span>${gName(gid)}</span><b>${summary[gid]}P</b></div>`;
+  });
+  st.innerHTML = sh + `</div></div>`;
   ct.innerHTML = h + '</tbody></table>';
-}
-
-// 起動時に保存データがあれば描画
-if(Object.keys(attackStart).length > 0 || Object.keys(defenseStart).length > 0) {
-  render();
 }
 </script>
 </body>
