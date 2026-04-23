@@ -182,7 +182,7 @@
     <button id="lookupBtn" class="sec">グループID検索</button>
   </div>
   <div class="group-hint">
-    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「グループID検索」で取得できます。
+    グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「検索」で取得できます。
   </div>
 </header>
 
@@ -312,7 +312,7 @@ const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 const fmtSec=(s)=>s?new Date(s*1000).toLocaleTimeString('ja-JP',{hour12:false}):'−';
-const fmtStart=(v)=>v===undefined||v===null||v==='−'?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
+const fmtStart=(v)=>v===undefined||v===null||v==='−'?'<span class="tn">−</span>':v==='before'?'<span class="tu">接続前時刻</span>':`<span class="tc">${new Date(v).toLocaleTimeString('ja-JP',{hour12:false})}</span>`;
 const setStat=(t,tx)=>{ 
   document.getElementById('statusDot').className='dot'+(t?' '+t:''); 
   document.getElementById('statusText').textContent=tx;
@@ -369,6 +369,7 @@ async function fetchInitial(gr,cl,bl){
         attackCount:c.AttackPartyCount||0,
         state:c.GvgCastleState||0, koCount:0
       };
+      // 初期取得時に既に配置されている場合は「接続前時刻」とする。既に保存時刻がある場合は上書きしない。
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
@@ -402,7 +403,7 @@ function connect(){
   ws.onopen=()=>{
     wsConnected=true;
     setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
-    document.getElementById('connectBtn').textContent='変更';
+    document.getElementById('connectBtn').textContent='更新';
     document.getElementById('connectBtn').classList.add('connected');
     const buf=new ArrayBuffer(4);
     new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
@@ -411,7 +412,7 @@ function connect(){
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
   ws.onclose=(e)=>{
     wsConnected=false;
-    setStat('','変更');
+    setStat('','更新');
     document.getElementById('connectBtn').textContent='接続';
     document.getElementById('connectBtn').classList.remove('connected');
   };
@@ -462,19 +463,20 @@ function parseMsg(dv,buf){
       
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
-        if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
+        // 人数が0から1以上になった瞬間のみDate.now()を記録する
+        if(ac > 0 && pv.attackCount === 0) {
           if(!attackStart[key] || attackStart[key] === 'before') {
             attackStart[key] = Date.now();
             logUpdated = true;
           }
         }
-        if(dc > 0 && (pv.defenseCount === 0 || pv.defenseCount === undefined)) {
+        if(dc > 0 && pv.defenseCount === 0) {
           if(!defenseStart[key] || defenseStart[key] === 'before') {
             defenseStart[key] = Date.now();
             logUpdated = true;
           }
         }
-        if(ft > 0 && (pv.fallenTs === 0 || pv.fallenTs === undefined)) {
+        if(ft > 0 && pv.fallenTs === 0) {
           if(!fallenStart[key]) {
             fallenStart[key] = ft * 1000;
             logUpdated = true;
