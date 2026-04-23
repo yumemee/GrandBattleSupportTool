@@ -262,7 +262,6 @@ function saveLog() {
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
   localStorage.setItem(`gw_fal_${currentDay}`, JSON.stringify(fallenStart));
-  localStorage.setItem('gw_lastUpdate_v2', Date.now().toString());
 }
 
 function updateDayTabs() {
@@ -293,7 +292,7 @@ const getUniqueKey = (cid) => {
   const gr = document.getElementById('groupInput').value || '0';
   const cl = document.getElementById('classSelect').value || '0';
   const bl = document.getElementById('blockSelect').value || '0';
-  return `${gr}_${cl}_${bl}_${cid}`;
+  return `g${gr}_c${cl}_b${bl}_id${cid}`;
 };
 
 loadDayData(viewDay);
@@ -306,7 +305,8 @@ setInterval(() => {
 
 function updateStickyPos() {
   const h = document.getElementById('header').offsetHeight;
-  document.getElementById('statusBar').style.top = h + 'px';
+  const s = document.getElementById('statusBar');
+  if(s) s.style.top = h + 'px';
 }
 window.addEventListener('resize', updateStickyPos);
 updateStickyPos();
@@ -322,7 +322,7 @@ const fmtTime = (ts) => {
   if (!ts || ts === 0 || ts === '−') return '<span class="tn">−</span>';
   if (ts === 'before') return '<span class="tu">接続前</span>';
   const d = new Date(Number(ts));
-  if (isNaN(d.getTime()) || d.getFullYear() < 2020) return '<span class="tn">−</span>';
+  if (isNaN(d.getTime())) return '<span class="tn">−</span>';
   return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false })}</span>`;
 };
 
@@ -385,6 +385,9 @@ async function fetchInitial(gr,cl,bl){
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
+        if(castles[cid].state===2 && c.UtcFallenTimeStamp && !fallenStart[key]) {
+          fallenStart[key] = c.UtcFallenTimeStamp * 1000;
+        }
         saveLog();
       }
     }
@@ -422,7 +425,7 @@ function connect(){
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
   ws.onclose=(e)=>{
     wsConnected=false;
-    setStat('','更新');
+    setStat('','接続');
     document.getElementById('connectBtn').textContent='接続';
     document.getElementById('connectBtn').classList.remove('connected');
   };
@@ -472,19 +475,19 @@ function parseMsg(dv,buf){
       
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
-        if(ac > 0 && pv.attackCount === 0) {
+        if(ac > 0 && (pv.attackCount === 0 || !attackStart[key])) {
           if(!attackStart[key] || attackStart[key] === 'before') {
             attackStart[key] = Date.now();
             logUpdated = true;
           }
         }
-        if(dc > 0 && pv.defenseCount === 0) {
+        if(dc > 0 && (pv.defenseCount === 0 || !defenseStart[key])) {
           if(!defenseStart[key] || defenseStart[key] === 'before') {
             defenseStart[key] = Date.now();
             logUpdated = true;
           }
         }
-        if(st === 2 && pv.state !== 2) {
+        if(st === 2 && (pv.state !== 2 || !fallenStart[key])) {
           if(!fallenStart[key]) {
             fallenStart[key] = Date.now();
             logUpdated = true;
@@ -521,7 +524,7 @@ function render(){
     if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    const dispFal = fallenStart[key] ? Number(fallenStart[key]) : 0;
+    const dispFal = fallenStart[key] || 0;
 
     h+=`<tr>
       <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
