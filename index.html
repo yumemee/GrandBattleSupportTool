@@ -171,7 +171,7 @@
     </div>
     <button id="connectBtn">接続</button>
     <button id="resetBtn" class="sec">リセット</button>
-    <button id="lookupBtn" class="sec">検索</button>
+    <button id="lookupBtn" class="sec">グループID検索</button>
   </div>
   <div class="group-hint">
     グループIDは <a href="https://api.mentemori.icu/wgroups" target="_blank">api.mentemori.icu/wgroups</a> で確認、または「検索」で取得できます。
@@ -355,7 +355,7 @@ function connect(){
   ws.onopen=()=>{
     wsConnected=true;
     setStat('connected',`G${gr} / B${'ABCD'[bl]}`);
-    document.getElementById('connectBtn').textContent='切断';
+    document.getElementById('connectBtn').textContent='更新';
     document.getElementById('connectBtn').classList.add('connected');
     const buf=new ArrayBuffer(4);
     new DataView(buf).setUint32(0,mkSid(0,bl,gr,cl,0),true);
@@ -364,7 +364,7 @@ function connect(){
   ws.onmessage=(e)=>parseMsg(new DataView(e.data),e.data);
   ws.onclose=(e)=>{
     wsConnected=false;
-    setStat('','切断');
+    setStat('','更新');
     document.getElementById('connectBtn').textContent='接続';
     document.getElementById('connectBtn').classList.remove('connected');
   };
