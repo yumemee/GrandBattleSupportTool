@@ -43,6 +43,15 @@
     .status-bar { top: 138px; }
   }
 
+  /* 曜日セレクターの追加スタイル (トナマナ準拠) */
+  .day-tabs { display: flex; gap: 4px; margin-left: 15px; }
+  .day-tab { 
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    padding: 2px 8px; border-radius: 3px; cursor: pointer; font-family: var(--mono); font-size: 10px;
+  }
+  .day-tab.active { border-color: var(--accent); color: var(--accent); background: #1a2030; }
+  .day-tab.today { border-style: dashed; color: var(--text); }
+
   h1 { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ctrl-group { display: flex; align-items: center; gap: 5px; }
@@ -180,7 +189,15 @@
 
 <div class="status-bar" id="statusBar">
   <span><span class="dot" id="statusDot"></span><span id="statusText">未接続</span></span>
-  <span id="matchInfo"></span>
+  <div class="day-tabs" id="dayTabs">
+    <span class="day-tab" data-day="Tue">TUE</span>
+    <span class="day-tab" data-day="Wed">WED</span>
+    <span class="day-tab" data-day="Thu">THU</span>
+    <span class="day-tab" data-day="Fri">FRI</span>
+    <span class="day-tab" data-day="Sat">SAT</span>
+    <span class="day-tab" data-day="Sun">SUN</span>
+  </div>
+  <span id="matchInfo" style="margin-left:auto"></span>
   <span id="clock"></span>
 </div>
 
@@ -191,7 +208,7 @@
     <div id="groupList"></div>
   </div>
   <div class="info-note">
-    ℹ️ 記録はAM4:00に自動リセットされます。手動リセットは表示中の設定のみ対象です。
+    ℹ️ 曜日を選択すると過去の保存ログを閲覧できます。AM4:00に自動で「今日の曜日」に切り替わります。
   </div>
   <div class="legend">
     <span class="legend-item"><span class="lc" style="background:var(--attack)"></span>攻撃</span>
@@ -221,44 +238,56 @@ function getGvgDaySuffix() {
   const now = new Date();
   if (now.getHours() < 4) now.setDate(now.getDate() - 1);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return days[now.getDay()];
+  let d = days[now.getDay()];
+  return (d === "Mon") ? "Sun" : d; // 月曜は日曜の残り
 }
 
-// --- 永続化ストレージとリセットロジック ---
-let currentDay = getGvgDaySuffix();
-let attackStart = JSON.parse(localStorage.getItem(`gw_atk_${currentDay}`) || '{}');
-let defenseStart = JSON.parse(localStorage.getItem(`gw_def_${currentDay}`) || '{}');
-let fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${currentDay}`) || '{}');
-let lastUpdate = localStorage.getItem('gw_lastUpdate_v2');
+// --- 永続化ストレージと表示用変数 ---
+let currentDay = getGvgDaySuffix(); // 実際に記録する「今日」の曜日
+let viewDay = getGvgDaySuffix();    // 現在テーブルに表示している曜日
+let attackStart = {};
+let defenseStart = {};
+let fallenStart = {};
 
-function checkDailyReset() {
-  const now = new Date();
-  const resetTime = new Date();
-  resetTime.setHours(4, 0, 0, 0);
-  if (now < resetTime) resetTime.setDate(resetTime.getDate() - 1);
-  const resetTs = resetTime.getTime();
-  
-  const newDay = getGvgDaySuffix();
-  if (newDay !== currentDay || !lastUpdate || parseInt(lastUpdate) < resetTs) {
-    currentDay = newDay;
-    // 曜日が新しくなればその曜日用のデータをロード。無ければ空。
-    attackStart = JSON.parse(localStorage.getItem(`gw_atk_${currentDay}`) || '{}');
-    defenseStart = JSON.parse(localStorage.getItem(`gw_def_${currentDay}`) || '{}');
-    fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${currentDay}`) || '{}');
-    saveLog();
-    console.log(`Daily Reset/Switch to ${currentDay} applied.`);
-    render();
-  }
+// データのロード関数
+function loadDayData(day) {
+  attackStart = JSON.parse(localStorage.getItem(`gw_atk_${day}`) || '{}');
+  defenseStart = JSON.parse(localStorage.getItem(`gw_def_${day}`) || '{}');
+  fallenStart = JSON.parse(localStorage.getItem(`gw_fal_${day}`) || '{}');
 }
 
-const saveLog = () => {
-  const ts = Date.now().toString();
+// データの保存関数 (常に「今日」の曜日に保存)
+function saveLog() {
   localStorage.setItem(`gw_atk_${currentDay}`, JSON.stringify(attackStart));
   localStorage.setItem(`gw_def_${currentDay}`, JSON.stringify(defenseStart));
   localStorage.setItem(`gw_fal_${currentDay}`, JSON.stringify(fallenStart));
-  localStorage.setItem('gw_lastUpdate_v2', ts);
-  lastUpdate = ts;
-};
+  localStorage.setItem('gw_lastUpdate_v2', Date.now().toString());
+}
+
+// 曜日切替UIの更新
+function updateDayTabs() {
+  document.querySelectorAll('.day-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.day === viewDay);
+    tab.classList.toggle('today', tab.dataset.day === currentDay);
+    tab.onclick = () => {
+      viewDay = tab.dataset.day;
+      loadDayData(viewDay);
+      updateDayTabs();
+      render();
+    };
+  });
+}
+
+function checkDailyReset() {
+  const newDay = getGvgDaySuffix();
+  if (newDay !== currentDay) {
+    currentDay = newDay;
+    viewDay = newDay;
+    loadDayData(currentDay);
+    updateDayTabs();
+    render();
+  }
+}
 
 const getUniqueKey = (cid) => {
   const gr = document.getElementById('groupInput').value || '0';
@@ -267,8 +296,10 @@ const getUniqueKey = (cid) => {
   return `${gr}_${cl}_${bl}_${cid}`;
 };
 
-// 起動時と定期チェック
-checkDailyReset();
+// 初期ロード
+loadDayData(viewDay);
+updateDayTabs();
+
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('ja-JP',{hour12:false});
   checkDailyReset(); 
@@ -345,11 +376,14 @@ async function fetchInitial(gr,cl,bl){
         attackCount:c.AttackPartyCount||0,
         state:c.GvgCastleState||0, koCount:0
       };
-      if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
-      if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
-      if(castles[cid].fallenTs>0 && !fallenStart[key]) fallenStart[key]=castles[cid].fallenTs * 1000;
+      // 接続した瞬間が「今日」ならログを更新
+      if(viewDay === currentDay) {
+        if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
+        if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
+        if(castles[cid].fallenTs>0 && !fallenStart[key]) fallenStart[key]=castles[cid].fallenTs * 1000;
+        saveLog();
+      }
     }
-    saveLog();
     render();
   } catch(e){ err('初期データ取得失敗'); }
 }
@@ -364,6 +398,12 @@ function connect(){
   guilds={}; castles={}; 
   document.getElementById('matchInfo').textContent='';
   setStat('connecting','接続中...');
+  
+  // 接続時は自動的に「今日」の表示に切り替える
+  viewDay = currentDay;
+  loadDayData(currentDay);
+  updateDayTabs();
+
   render();
   fetchInitial(gr,cl,bl);
   ws=new WebSocket(WS_URL);
@@ -389,13 +429,12 @@ function connect(){
 document.getElementById('connectBtn').addEventListener('click',()=>wsConnected?(ws.close(),ws=null):connect());
 
 document.getElementById('resetBtn').addEventListener('click',()=>{
-  if(!confirm('現在表示中のグループ・ブロックの開始ログをリセットしますか？')) return;
-  for(let i=1; i<=21; i++){
-    const key = getUniqueKey(i);
-    delete attackStart[key];
-    delete defenseStart[key];
-    delete fallenStart[key];
-    if(castles[i]){
+  if(!confirm(`${viewDay}のログをリセットしますか？`)) return;
+  attackStart = {}; defenseStart = {}; fallenStart = {};
+  // 接続中かつ「今日」をリセットした場合は現在の盤面から「接続前」として再セット
+  if(wsConnected && viewDay === currentDay) {
+    for(let i in castles) {
+      const key = getUniqueKey(i);
       if(castles[i].attackCount>0) attackStart[key]='before';
       if(castles[i].defenseCount>0) defenseStart[key]='before';
       if(castles[i].fallenTs>0) fallenStart[key]=castles[i].fallenTs * 1000;
@@ -430,28 +469,31 @@ function parseMsg(dv,buf){
       const key = getUniqueKey(cid);
       
       const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0};
-      let logUpdated = false;
-
-      if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
-        if(!attackStart[key] || attackStart[key] === 'before') {
-          attackStart[key] = Date.now();
-          logUpdated = true;
-        }
-      }
-      if(dc > 0 && (pv.defenseCount === 0 || pv.defenseCount === undefined)) {
-        if(!defenseStart[key] || defenseStart[key] === 'before') {
-          defenseStart[key] = Date.now();
-          logUpdated = true;
-        }
-      }
-      if(ft > 0 && (pv.fallenTs === 0 || pv.fallenTs === undefined)) {
-        if(!fallenStart[key]) {
-          fallenStart[key] = ft * 1000;
-          logUpdated = true;
-        }
-      }
       
-      if(logUpdated) saveLog();
+      // ログ記録は表示日に関係なく常に「現在の曜日」に対して行う
+      if(viewDay === currentDay) {
+        let logUpdated = false;
+        if(ac > 0 && (pv.attackCount === 0 || pv.attackCount === undefined)) {
+          if(!attackStart[key] || attackStart[key] === 'before') {
+            attackStart[key] = Date.now();
+            logUpdated = true;
+          }
+        }
+        if(dc > 0 && (pv.defenseCount === 0 || pv.defenseCount === undefined)) {
+          if(!defenseStart[key] || defenseStart[key] === 'before') {
+            defenseStart[key] = Date.now();
+            logUpdated = true;
+          }
+        }
+        if(ft > 0 && (pv.fallenTs === 0 || pv.fallenTs === undefined)) {
+          if(!fallenStart[key]) {
+            fallenStart[key] = ft * 1000;
+            logUpdated = true;
+          }
+        }
+        if(logUpdated) saveLog();
+      }
+
       castles[cid]={ownerGuildId:og,attackerGuildId:ag,fallenTs:ft,defenseCount:dc,attackCount:ac,state:st,koCount:ko};
       changed=true;
     }
@@ -462,14 +504,8 @@ function parseMsg(dv,buf){
 function render(){
   const ct=document.getElementById('tableContainer');
   const st = document.getElementById('summaryContainer');
-  const cids=Object.keys(castles).map(Number).sort((a,b)=>a-b);
+  const cids=Object.keys(castles).length > 0 ? Object.keys(castles).map(Number).sort((a,b)=>a-b) : Array.from({length:21},(_,i)=>i+1);
   
-  if(!cids.length && Object.keys(castles).length === 0){ 
-    ct.innerHTML='<div class="no-data"><span>🏰</span>グループIDを入力して接続してください</div>'; 
-    st.innerHTML='';
-    return; 
-  }
-
   const summary = {};
   let h=`<table><thead><tr>
     <th>拠点</th><th>所有ギルド</th><th>攻撃ギルド</th><th>状態</th>
@@ -478,13 +514,12 @@ function render(){
   </tr></thead><tbody>`;
 
   for(const cid of cids){
-    const c=castles[cid];
+    const c=castles[cid] || {ownerGuildId:0, attackerGuildId:0, state:0, attackCount:0, defenseCount:0, fallenTs:0, koCount:0};
     const cname = CNAMES[cid] || '???';
     const key = getUniqueKey(cid);
     if(c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    // 陥落時刻の表示判断
     const displayFallen = fallenStart[key] ? fallenStart[key] / 1000 : c.fallenTs;
 
     h+=`<tr>
@@ -518,7 +553,7 @@ function render(){
   ct.innerHTML = h + '</tbody></table>';
 }
 
-if(Object.keys(attackStart).length > 0 || Object.keys(defenseStart).length > 0 || Object.keys(fallenStart).length > 0) render();
+render();
 </script>
 </body>
 </html>
