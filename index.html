@@ -318,13 +318,14 @@ const err=(m)=>{ const e=document.getElementById('apiError'); e.textContent=m; e
 const hideErr=()=>{ document.getElementById('apiError').style.display='none'; };
 const gName=(id)=>!id?'−':(guilds[id]||`ID:${id}`);
 
-// 時刻表示用関数：ミリ秒タイムスタンプを受け取る
+// 時刻表示用関数：ミリ秒タイムスタンプを厳格にJST表示する
 const fmtTime = (ts) => {
   if (!ts || ts === 0 || ts === '−') return '<span class="tn">−</span>';
   if (ts === 'before') return '<span class="tu">接続前</span>';
-  // 数値型であることを確認し、Dateオブジェクト生成（自動的にJST変換される）
+  // 数値型であることを保証してDateオブジェクト生成
   const d = new Date(Number(ts));
-  if (isNaN(d.getTime())) return '<span class="tn">−</span>';
+  // 無効な日付のチェック
+  if (isNaN(d.getTime()) || d.getFullYear() < 2020) return '<span class="tn">−</span>';
   return `<span class="tc">${d.toLocaleTimeString('ja-JP', { hour12: false })}</span>`;
 };
 
@@ -385,7 +386,7 @@ async function fetchInitial(gr,cl,bl){
       if(viewDay === currentDay) {
         if(castles[cid].attackCount>0 && !attackStart[key]) attackStart[key]='before';
         if(castles[cid].defenseCount>0 && !defenseStart[key]) defenseStart[key]='before';
-        // 初回ロード時の陥落時刻もミリ秒に変換して保存（秒 * 1000）
+        // 初回ロード時、拠点が陥落状態(2)かつタイムスタンプがあれば保存
         if(castles[cid].fallenTs > 0 && !fallenStart[key]) {
             fallenStart[key] = castles[cid].fallenTs * 1000;
         }
@@ -473,7 +474,7 @@ function parseMsg(dv,buf){
       const cid=p.castleId;
       const key = getUniqueKey(cid);
       
-      const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0};
+      const pv=castles[cid]||{attackCount:0, defenseCount:0, fallenTs:0, state:0};
       
       if(currentDay === getGvgDaySuffix()) {
         let logUpdated = false;
@@ -489,9 +490,10 @@ function parseMsg(dv,buf){
             logUpdated = true;
           }
         }
-        // 陥落検知：サーバーから新たなタイムスタンプが届いた際
+        // 陥落検知：現在の状態が陥落(2)かつ、前回の陥落時刻から変化している場合のみ保存
+        // サーバーが送ってくる ft はUTC秒数。これを確実に日本時間にする。
         if(ft > 0 && ft !== pv.fallenTs) {
-          fallenStart[key] = ft * 1000; // 秒をミリ秒に
+          fallenStart[key] = ft * 1000;
           logUpdated = true;
         }
         if(logUpdated) saveLog();
@@ -526,8 +528,13 @@ function render(){
     if(isToday && c.ownerGuildId) summary[c.ownerGuildId] = (summary[c.ownerGuildId] || 0) + c.defenseCount;
     if(isToday && c.attackerGuildId) summary[c.attackerGuildId] = (summary[c.attackerGuildId] || 0) + c.attackCount;
 
-    // 表示する陥落タイムスタンプの決定（すべてミリ秒単位で管理）
-    const dispFal = fallenStart[key] ? fallenStart[key] : (isToday && c.fallenTs ? c.fallenTs * 1000 : 0);
+    // 陥落タイムスタンプの決定：保存されたミリ秒スタンプを優先
+    let dispFal = fallenStart[key] ? Number(fallenStart[key]) : 0;
+    
+    // 今日の表示で、保存データがない場合はサーバー生データを使用
+    if(isToday && !dispFal && c.fallenTs > 0) {
+      dispFal = c.fallenTs * 1000;
+    }
 
     h+=`<tr>
       <td><div class="cid-cell"><span class="cid">${cid}</span><span class="cname">${cname}</span></div></td>
